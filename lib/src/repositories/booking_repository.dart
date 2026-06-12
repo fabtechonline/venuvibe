@@ -1,8 +1,8 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/booking.dart';
-import 'package:book_it/src/repositories/tenant_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/booking.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
   return BookingRepository(SupabaseConfig.client);

@@ -1,7 +1,7 @@
-import 'package:book_it/src/routing/app_router.dart';
-import 'package:book_it/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:venue_vibe/src/routing/app_router.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class App extends ConsumerWidget {
   const App({super.key});

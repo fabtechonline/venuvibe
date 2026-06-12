@@ -1,13 +1,13 @@
-import 'package:book_it/src/repositories/favorite_repository.dart';
-import 'package:book_it/src/repositories/resource_repository.dart';
-import 'package:book_it/src/repositories/review_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
-import 'package:book_it/src/utils/currency_formatter.dart';
-import 'package:book_it/src/widgets/star_rating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:venue_vibe/src/repositories/favorite_repository.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
+import 'package:venue_vibe/src/repositories/review_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
+import 'package:venue_vibe/src/utils/currency_formatter.dart';
+import 'package:venue_vibe/src/widgets/star_rating.dart';
 
 class ResourceDetailScreen extends ConsumerWidget {
   const ResourceDetailScreen({required this.resourceId, super.key});

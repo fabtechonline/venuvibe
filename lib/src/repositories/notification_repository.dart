@@ -1,7 +1,7 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/notification.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/notification.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   return NotificationRepository(SupabaseConfig.client);

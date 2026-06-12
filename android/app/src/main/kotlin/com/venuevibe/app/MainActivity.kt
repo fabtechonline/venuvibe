@@ -1,4 +1,4 @@
-package com.example.book_it
+package com.venuevibe.app
 
 import io.flutter.embedding.android.FlutterActivity
 

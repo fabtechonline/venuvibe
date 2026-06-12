@@ -1,10 +1,10 @@
-import 'package:book_it/src/repositories/booking_repository.dart';
-import 'package:book_it/src/repositories/tenant_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
-import 'package:book_it/src/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:venue_vibe/src/repositories/booking_repository.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
+import 'package:venue_vibe/src/utils/currency_formatter.dart';
 
 class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({super.key});

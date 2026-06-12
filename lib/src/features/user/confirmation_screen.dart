@@ -1,6 +1,6 @@
-import 'package:book_it/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class ConfirmationScreen extends StatelessWidget {
   const ConfirmationScreen({required this.bookingId, super.key});

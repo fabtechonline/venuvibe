@@ -1,5 +1,5 @@
-import 'package:book_it/src/models/booking.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:venue_vibe/src/models/booking.dart';
 
 void main() {
   group('Booking time handling', () {

@@ -1,5 +1,5 @@
-import 'package:book_it/src/repositories/tenant_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
 /// Maps ISO 4217 currency codes to their display symbols.
 const _currencySymbols = <String, String>{

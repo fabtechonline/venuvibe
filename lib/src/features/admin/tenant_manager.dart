@@ -1,7 +1,7 @@
-import 'package:book_it/src/repositories/tenant_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class TenantManager extends ConsumerWidget {
   const TenantManager({super.key});

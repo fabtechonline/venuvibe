@@ -1,8 +1,8 @@
 name: CI
 
 # Runs static analysis and tests on every push / PR.
-# Assumes this repo's root is the Flutter project (book_it/). If you instead
-# commit the parent folder, set `working-directory: book_it` on the run steps.
+# Assumes this repo's root is the Flutter project (venue_vibe/). If you instead
+# commit the parent folder, set `working-directory: venue_vibe` on the run steps.
 
 on:
   push:

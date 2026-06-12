@@ -1,7 +1,7 @@
-import 'package:book_it/src/models/notification.dart';
-import 'package:book_it/src/models/review.dart';
-import 'package:book_it/src/models/slot_block.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:venue_vibe/src/models/notification.dart';
+import 'package:venue_vibe/src/models/review.dart';
+import 'package:venue_vibe/src/models/slot_block.dart';
 
 void main() {
   group('AppNotification.fromJson', () {

@@ -1,13 +1,13 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/slot_block.dart';
-import 'package:book_it/src/repositories/booking_repository.dart';
-import 'package:book_it/src/repositories/resource_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
-import 'package:book_it/src/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/slot_block.dart';
+import 'package:venue_vibe/src/repositories/booking_repository.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
+import 'package:venue_vibe/src/utils/currency_formatter.dart';
 
 class SchedulerCalendar extends ConsumerStatefulWidget {
   const SchedulerCalendar({super.key});

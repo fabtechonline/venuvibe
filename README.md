@@ -1,16 +1,46 @@
-# book_it
+# Venue Vibe
 
-A new Flutter project.
+Multi-tenant venue & resource booking platform built with **Flutter** and
+**Supabase**.
 
-## Getting Started
+Three roles in one app:
 
-This project is a starting point for a Flutter application.
+- **Customers** — discover venues, check live availability, book time slots,
+  review & favorite spaces, manage bookings.
+- **Venue managers (tenants)** — onboard their venue, manage resources, photos,
+  pricing tiers, operating hours, maintenance blocks, and see their bookings &
+  earnings.
+- **Platform admins** — categories, tenant approval, commission & currency
+  settings, subscription plans, invoicing.
 
-A few resources to get you started if this is your first Flutter project:
+## Stack
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+| Layer | Tech |
+|---|---|
+| UI / state | Flutter, Riverpod, go_router |
+| Backend | Supabase (Postgres + RLS, Auth, Storage, Edge Functions) |
+| Integrity | Exclusion constraint (no double-bookings), `get_busy_slots` RPC, plan-limit trigger |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Project layout
+
+```
+lib/src/
+  features/      user / tenant / admin screens
+  models/        plain Dart models
+  repositories/  typed Supabase data access (Riverpod providers)
+  routing/       go_router + role guards
+supabase/
+  migrations/    ordered SQL (constraints, RLS, storage, RPCs)
+  functions/     gateway-agnostic payment Edge Functions (scaffold)
+```
+
+## Getting started
+
+```bash
+flutter pub get
+flutter test
+flutter run
+```
+
+Database setup: apply `supabase/migrations/` in order via the Supabase SQL
+editor (each file is idempotent — see `supabase/migrations/README.md`).

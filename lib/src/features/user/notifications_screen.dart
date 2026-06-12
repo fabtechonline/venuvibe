@@ -1,8 +1,8 @@
-import 'package:book_it/src/repositories/notification_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:venue_vibe/src/repositories/notification_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});

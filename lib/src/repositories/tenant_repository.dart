@@ -1,9 +1,9 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/category.dart';
-import 'package:book_it/src/models/platform_models.dart';
-import 'package:book_it/src/models/tenant.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/category.dart';
+import 'package:venue_vibe/src/models/platform_models.dart';
+import 'package:venue_vibe/src/models/tenant.dart';
 
 final tenantRepositoryProvider = Provider<TenantRepository>((ref) {
   return TenantRepository(SupabaseConfig.client);

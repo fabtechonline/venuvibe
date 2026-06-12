@@ -1,10 +1,10 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/tenant.dart';
-import 'package:book_it/src/repositories/resource_repository.dart';
-import 'package:book_it/src/repositories/tenant_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/tenant.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
 
 /// Shown when a tenant account has no `tenants` row yet (e.g. just signed up).
 /// Creates the venue (status 'pending') so an admin can approve it.

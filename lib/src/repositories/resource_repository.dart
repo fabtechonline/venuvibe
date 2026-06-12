@@ -1,12 +1,12 @@
-import 'package:book_it/src/core/supabase_config.dart';
-import 'package:book_it/src/models/busy_slot.dart';
-import 'package:book_it/src/models/category.dart';
-import 'package:book_it/src/models/duration_model.dart';
-import 'package:book_it/src/models/resource.dart';
-import 'package:book_it/src/models/slot_block.dart';
-import 'package:book_it/src/repositories/tenant_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/busy_slot.dart';
+import 'package:venue_vibe/src/models/category.dart';
+import 'package:venue_vibe/src/models/duration_model.dart';
+import 'package:venue_vibe/src/models/resource.dart';
+import 'package:venue_vibe/src/models/slot_block.dart';
+import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
 final resourceRepositoryProvider = Provider<ResourceRepository>((ref) {
   return ResourceRepository(SupabaseConfig.client);

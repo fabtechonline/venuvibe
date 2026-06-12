@@ -1,14 +1,14 @@
-import 'package:book_it/src/models/busy_slot.dart';
-import 'package:book_it/src/models/duration_model.dart';
-import 'package:book_it/src/models/resource.dart';
-import 'package:book_it/src/repositories/resource_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
-import 'package:book_it/src/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:venue_vibe/src/models/busy_slot.dart';
+import 'package:venue_vibe/src/models/duration_model.dart';
+import 'package:venue_vibe/src/models/resource.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
+import 'package:venue_vibe/src/utils/currency_formatter.dart';
 
 class AvailabilityCalendar extends ConsumerStatefulWidget {
   const AvailabilityCalendar({required this.resourceId, super.key});

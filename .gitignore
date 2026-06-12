@@ -53,3 +53,6 @@ app.*.map.json
 
 # Claude Code tooling copied into the project (not part of the app)
 Skills/
+
+# Kotlin daemon logs
+android/.kotlin/

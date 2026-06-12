@@ -19,9 +19,9 @@ idempotent (safe to re-run).
    before the client UI lands.
 
 ## Test after 0002 (RLS) — sign in as each role
-- **Customer** (`user@bookit.test`): can browse resources, see **only their own**
+- **Customer** (`user@venuevibe.test`): can browse resources, see **only their own**
   bookings, create/cancel their own. Cannot open another user's booking.
-- **Tenant** (`tenant@bookit.test`): sees **only their** resources, durations,
+- **Tenant** (`tenant@venuevibe.test`): sees **only their** resources, durations,
   blocks, and bookings on their resources. Cannot edit another tenant's.
 - **Admin**: full access to categories, tenants, settings, plans.
 

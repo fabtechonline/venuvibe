@@ -1,9 +1,9 @@
-import 'package:book_it/src/models/duration_model.dart';
-import 'package:book_it/src/repositories/resource_repository.dart';
-import 'package:book_it/src/theme/app_theme.dart';
-import 'package:book_it/src/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:venue_vibe/src/models/duration_model.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
+import 'package:venue_vibe/src/theme/app_theme.dart';
+import 'package:venue_vibe/src/utils/currency_formatter.dart';
 
 class RulesScreen extends ConsumerStatefulWidget {
   const RulesScreen({super.key});
