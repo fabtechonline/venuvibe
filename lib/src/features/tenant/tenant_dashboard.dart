@@ -149,7 +149,7 @@ class _StatCard extends ConsumerWidget {
   });
   final IconData icon;
   final String label;
-  final AsyncValue valueAsync;
+  final AsyncValue<num> valueAsync;
   final Color color;
   final bool isCurrency;
 
@@ -173,7 +173,7 @@ class _StatCard extends ConsumerWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
-                isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
+                isCurrency ? formatPrice(v.toDouble(), cc) : '$v',
                 maxLines: 1,
                 style: TextStyle(
                   fontSize: 28,
@@ -277,7 +277,8 @@ class _TodayBookingsSection extends ConsumerWidget {
                 ),
                 title: Text(b.resourceName ?? 'Resource'),
                 subtitle: Text(
-                  '${timeFormat.format(b.startTime)} - ${timeFormat.format(b.endTime)}',
+                  '${timeFormat.format(b.startTime)} - '
+                  '${timeFormat.format(b.endTime)}',
                 ),
                 trailing: Text(
                   formatPrice(

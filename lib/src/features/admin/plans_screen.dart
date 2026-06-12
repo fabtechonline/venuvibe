@@ -160,7 +160,7 @@ class PlansScreen extends ConsumerWidget {
     final priceCtrl = TextEditingController();
     final maxCtrl = TextEditingController(text: '5');
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Create Plan'),
@@ -223,7 +223,7 @@ class PlansScreen extends ConsumerWidget {
     final priceCtrl = TextEditingController(text: plan.priceMonthly.toString());
     final maxCtrl = TextEditingController(text: plan.maxResources.toString());
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Edit ${plan.name}'),

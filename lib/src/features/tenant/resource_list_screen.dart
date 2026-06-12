@@ -114,7 +114,7 @@ class ResourceListScreen extends ConsumerWidget {
                         onChanged: (v) async {
                           await ref
                               .read(resourceRepositoryProvider)
-                              .toggleResource(r.id, v);
+                              .toggleResource(r.id, isActive: v);
                           ref
                             ..invalidate(tenantResourcesProvider)
                             ..invalidate(allResourcesProvider);

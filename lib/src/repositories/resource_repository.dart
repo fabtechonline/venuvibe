@@ -139,7 +139,7 @@ class ResourceRepository {
     await _client.from('resources').delete().eq('id', id);
   }
 
-  Future<void> toggleResource(String id, bool isActive) async {
+  Future<void> toggleResource(String id, {required bool isActive}) async {
     await _client
         .from('resources')
         .update({'is_active': isActive}).eq('id', id);
@@ -287,7 +287,7 @@ class ResourceRepository {
     DateTime start,
     DateTime end,
   ) async {
-    final data = await _client.rpc(
+    final data = await _client.rpc<List<dynamic>>(
       'get_busy_slots',
       params: {
         'p_resource_id': resourceId,
@@ -295,7 +295,7 @@ class ResourceRepository {
         'p_to': end.toUtc().toIso8601String(),
       },
     );
-    return (data as List)
+    return data
         .map((e) => BusySlot.fromJson(e as Map<String, dynamic>))
         .toList();
   }

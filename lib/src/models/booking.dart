@@ -23,6 +23,9 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    final resourcesJson = json['resources'] as Map<String, dynamic>?;
+    final tenantsJson = resourcesJson?['tenants'] as Map<String, dynamic>?;
+    final profilesJson = json['profiles'] as Map<String, dynamic>?;
     return Booking(
       id: json['id'] as String,
       userId: json['user_id'] as String,
@@ -43,16 +46,9 @@ class Booking {
       addonsTotal: (json['addons_total'] as num?)?.toDouble() ?? 0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
-      resourceName: json['resources'] != null
-          ? (json['resources'] as Map<String, dynamic>)['name'] as String?
-          : null,
-      tenantName: json['resources']?['tenants'] != null
-          ? (json['resources']['tenants'] as Map<String, dynamic>)['name']
-              as String?
-          : null,
-      userName: json['profiles'] != null
-          ? (json['profiles'] as Map<String, dynamic>)['full_name'] as String?
-          : null,
+      resourceName: resourcesJson?['name'] as String?,
+      tenantName: tenantsJson?['name'] as String?,
+      userName: profilesJson?['full_name'] as String?,
     );
   }
   final String id;

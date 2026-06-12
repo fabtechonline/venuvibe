@@ -103,6 +103,7 @@ class _BookingList extends ConsumerWidget {
     final theme = Theme.of(context);
     final dateFormat = DateFormat('EEE, MMM d');
     final timeFormat = DateFormat.jm();
+    final cc = ref.watch(currencyCodeProvider);
     final settings = ref.watch(platformSettingsProvider).valueOrNull;
     final windowHours = settings?.cancellationWindowHours ?? 24;
 
@@ -189,7 +190,8 @@ class _BookingList extends ConsumerWidget {
                     Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 8),
                     Text(
-                      '${timeFormat.format(b.startTime)} - ${timeFormat.format(b.endTime)}',
+                      '${timeFormat.format(b.startTime)} - '
+                      '${timeFormat.format(b.endTime)}',
                     ),
                   ],
                 ),
@@ -197,7 +199,7 @@ class _BookingList extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Venue discount −'
-                    '${formatPrice(b.discountAmount, ref.watch(currencyCodeProvider))}',
+                    '${formatPrice(b.discountAmount, cc)}',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: AppTheme.successGreen),
                   ),
@@ -214,10 +216,7 @@ class _BookingList extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      formatPrice(
-                        b.totalPrice,
-                        ref.watch(currencyCodeProvider),
-                      ),
+                      formatPrice(b.totalPrice, cc),
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: AppTheme.primaryBlue,
                         fontWeight: FontWeight.w700,

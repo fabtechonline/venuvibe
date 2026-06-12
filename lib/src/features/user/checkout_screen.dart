@@ -163,8 +163,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   _SummaryRow(
                     icon: Icons.access_time,
                     label: 'Time',
-                    value:
-                        '${timeFormat.format(widget.startTime)} - ${timeFormat.format(widget.endTime)}',
+                    value: '${timeFormat.format(widget.startTime)} - '
+                        '${timeFormat.format(widget.endTime)}',
                   ),
                   const SizedBox(height: 12),
                   _SummaryRow(

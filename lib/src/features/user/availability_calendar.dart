@@ -208,6 +208,7 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
               height: 52,
               child: durationsAsync.when(
                 data: (allDurs) {
+                  final cc = ref.watch(currencyCodeProvider);
                   final minMinutes = resource?.minBookingMinutes ?? 0;
                   final durs =
                       allDurs.where((d) => d.minutes >= minMinutes).toList();
@@ -237,7 +238,8 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
                               label: Text(
-                                '${d.label} - ${formatPriceShort(d.price, ref.watch(currencyCodeProvider))}',
+                                '${d.label} - '
+                                '${formatPriceShort(d.price, cc)}',
                               ),
                               selected: _selectedDuration?.id == d.id,
                               onSelected: (_) {

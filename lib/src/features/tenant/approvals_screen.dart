@@ -49,6 +49,11 @@ class ApprovalsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final b = pending[index];
               final minutes = b.endTime.difference(b.startTime).inMinutes;
+              final durationH =
+                  (minutes / 60).toStringAsFixed(minutes % 60 == 0 ? 0 : 1);
+              final addonsPart = b.addonsTotal > 0
+                  ? ' + ${formatPrice(b.addonsTotal, cc)} add-ons'
+                  : '';
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
@@ -82,14 +87,14 @@ class ApprovalsScreen extends ConsumerWidget {
                         '${dateFmt.format(b.startTime)} · '
                         '${timeFmt.format(b.startTime)} – '
                         '${timeFmt.format(b.endTime)} '
-                        '(${(minutes / 60).toStringAsFixed(minutes % 60 == 0 ? 0 : 1)}h)',
+                        '(${durationH}h)',
                         style: TextStyle(color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 6),
                       _AddonsLine(bookingId: b.id),
                       Text(
                         'Requested: ${formatPrice(b.basePrice ?? 0, cc)} venue'
-                        '${b.addonsTotal > 0 ? ' + ${formatPrice(b.addonsTotal, cc)} add-ons' : ''}'
+                        '$addonsPart'
                         ' · ${formatPrice(b.totalPrice, cc)} total',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),

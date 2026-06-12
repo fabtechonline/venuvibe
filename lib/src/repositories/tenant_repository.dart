@@ -83,7 +83,10 @@ class TenantRepository {
     await _client.from('tenants').update(tenant.toJson()).eq('id', tenant.id);
   }
 
-  Future<void> toggleTenantActive(String tenantId, bool isActive) async {
+  Future<void> toggleTenantActive(
+    String tenantId, {
+    required bool isActive,
+  }) async {
     await _client
         .from('tenants')
         .update({'is_active': isActive}).eq('id', tenantId);
@@ -208,7 +211,7 @@ class TenantRepository {
   /// Generates pending invoices for every tenant for the given period via the
   /// admin-only generate_invoices RPC. Returns the number created.
   Future<int> generateInvoices(DateTime periodStart, DateTime periodEnd) async {
-    final result = await _client.rpc(
+    final result = await _client.rpc<int>(
       'generate_invoices',
       params: {
         'p_period_start': periodStart.toIso8601String().split('T').first,

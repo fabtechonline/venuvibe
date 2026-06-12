@@ -105,7 +105,9 @@ class _CommissionScreenState extends ConsumerState<CommissionScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Commission is applied as a percentage on top of every booking. Tenants see the net amount, platform retains the commission.',
+                      'Commission is applied as a percentage on top of every '
+                      'booking. Tenants see the net amount, platform retains '
+                      'the commission.',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),

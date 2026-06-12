@@ -23,9 +23,10 @@ class AdminDashboard extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.invalidate(totalTenantsProvider);
-              ref.invalidate(totalBookingsProvider);
-              ref.invalidate(totalRevenueProvider);
+              ref
+                ..invalidate(totalTenantsProvider)
+                ..invalidate(totalBookingsProvider)
+                ..invalidate(totalRevenueProvider);
             },
           ),
         ],
@@ -128,7 +129,8 @@ class AdminDashboard extends ConsumerWidget {
                             SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Platform settings not configured. Go to Commission settings to initialize.',
+                                'Platform settings not configured. '
+                                'Go to Commission settings to initialize.',
                                 style: TextStyle(color: AppTheme.warningOrange),
                               ),
                             ),
@@ -188,7 +190,7 @@ class _AdminStatCard extends ConsumerWidget {
   });
   final IconData icon;
   final String label;
-  final AsyncValue valueAsync;
+  final AsyncValue<num> valueAsync;
   final Color color;
   final bool isCurrency;
 
@@ -212,7 +214,7 @@ class _AdminStatCard extends ConsumerWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
-                isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
+                isCurrency ? formatPrice(v.toDouble(), cc) : '$v',
                 maxLines: 1,
                 style: TextStyle(
                   fontSize: 24,

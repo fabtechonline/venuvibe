@@ -135,7 +135,7 @@ class CategoryManager extends ConsumerWidget {
     final descCtrl = TextEditingController();
     final iconCtrl = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Add Category'),
@@ -188,7 +188,7 @@ class CategoryManager extends ConsumerWidget {
     final nameCtrl = TextEditingController(text: category.name);
     final descCtrl = TextEditingController(text: category.description ?? '');
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Category'),
