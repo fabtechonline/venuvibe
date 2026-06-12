@@ -117,7 +117,13 @@ class TenantDashboard extends ConsumerWidget {
               icon: Icons.block,
               title: 'Block Time Slot',
               subtitle: 'Reserve time for maintenance or private use',
-              onTap: () => context.go('/tenant/scheduler'),
+              onTap: () => context.push('/tenant/scheduler'),
+            ),
+            _ActionCard(
+              icon: Icons.storefront,
+              title: 'Venue Profile',
+              subtitle: 'Contact person, number and address shown to customers',
+              onTap: () => context.push('/tenant/profile'),
             ),
 
             const SizedBox(height: 24),

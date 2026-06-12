@@ -71,6 +71,17 @@ class _SchedulerCalendarState extends ConsumerState<SchedulerCalendar> {
     final timeFormat = DateFormat.jm();
     final currencyCode = ref.watch(currencyCodeProvider);
     final resources = ref.watch(tenantResourcesProvider).valueOrNull ?? [];
+    // Opened from a resource card: lock onto that resource (no filter pills).
+    final locked = widget.initialResourceId != null;
+    var title = 'Scheduler';
+    if (locked) {
+      for (final r in resources) {
+        if (r.id == widget.initialResourceId) {
+          title = '${r.name} · Schedule';
+          break;
+        }
+      }
+    }
     final bookingsAsync = ref.watch(tenantBookingsProvider);
     final blocks =
         (ref.watch(tenantSlotBlocksProvider).valueOrNull ?? <SlotBlock>[])
@@ -79,36 +90,39 @@ class _SchedulerCalendarState extends ConsumerState<SchedulerCalendar> {
     final allBookings = bookingsAsync.valueOrNull ?? <Booking>[];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Scheduler')),
+      appBar: AppBar(title: Text(title)),
       body: Column(
         children: [
-          // ─── Resource Filter ───
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: const Text('All resources'),
-                    selected: _resourceFilter == null,
-                    onSelected: (_) => setState(() => _resourceFilter = null),
-                  ),
-                ),
-                for (final r in resources)
+          // ─── Resource Filter (hidden when locked to one resource) ───
+          if (!locked)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(r.name),
-                      selected: _resourceFilter == r.id,
-                      onSelected: (_) => setState(() => _resourceFilter = r.id),
+                      label: const Text('All resources'),
+                      selected: _resourceFilter == null,
+                      onSelected: (_) => setState(() => _resourceFilter = null),
                     ),
                   ),
-              ],
+                  for (final r in resources)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(r.name),
+                        selected: _resourceFilter == r.id,
+                        onSelected: (_) =>
+                            setState(() => _resourceFilter = r.id),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
 
           // ─── Calendar (tap once = day, tap a second day = range) ───
           Card(

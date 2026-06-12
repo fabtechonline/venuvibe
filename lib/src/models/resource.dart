@@ -19,6 +19,11 @@ class Resource {
     this.hourlyRate,
     this.tenantName,
     this.categoryName,
+    this.tenantContactPerson,
+    this.tenantPhone,
+    this.tenantEmail,
+    this.tenantAddress,
+    this.tenantCity,
   });
 
   factory Resource.fromJson(Map<String, dynamic> json) {
@@ -52,8 +57,18 @@ class Resource {
       categoryName: json['categories'] != null
           ? (json['categories'] as Map<String, dynamic>)['name'] as String?
           : null,
+      tenantContactPerson: _tenantField(json, 'contact_person'),
+      tenantPhone: _tenantField(json, 'phone'),
+      tenantEmail: _tenantField(json, 'email'),
+      tenantAddress: _tenantField(json, 'address'),
+      tenantCity: _tenantField(json, 'city'),
     );
   }
+
+  static String? _tenantField(Map<String, dynamic> json, String key) =>
+      json['tenants'] != null
+          ? (json['tenants'] as Map<String, dynamic>)[key] as String?
+          : null;
   final String id;
   final String tenantId;
   final String? categoryId;
@@ -75,6 +90,11 @@ class Resource {
   // Joined fields
   final String? tenantName;
   final String? categoryName;
+  final String? tenantContactPerson;
+  final String? tenantPhone;
+  final String? tenantEmail;
+  final String? tenantAddress;
+  final String? tenantCity;
 
   int get openHour => _hourOf(openTime, 7);
   int get openMinute => _minuteOf(openTime);

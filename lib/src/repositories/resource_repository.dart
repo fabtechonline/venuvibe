@@ -113,7 +113,7 @@ class ResourceRepository {
   Future<Resource> getResource(String id) async {
     final data = await _client.from('resources').select('''
       *,
-      tenants(name, address, city, phone, email),
+      tenants(name, address, city, phone, email, contact_person),
       categories(name)
     ''').eq('id', id).single();
     return Resource.fromJson(data);
@@ -152,7 +152,7 @@ class ResourceRepository {
         .select()
         .eq('resource_id', resourceId)
         .eq('is_active', true)
-        .order('minutes');
+        .order('minutes', ascending: true);
     return data.map(DurationModel.fromJson).toList();
   }
 

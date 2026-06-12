@@ -134,7 +134,7 @@ class ResourceListScreen extends ConsumerWidget {
                             label: const Text('Edit'),
                           ),
                           TextButton.icon(
-                            onPressed: () => context.go(
+                            onPressed: () => context.push(
                               '/tenant/scheduler',
                               extra: r.id,
                             ),
@@ -145,7 +145,7 @@ class ResourceListScreen extends ConsumerWidget {
                             label: const Text('Scheduler'),
                           ),
                           TextButton.icon(
-                            onPressed: () => context.go(
+                            onPressed: () => context.push(
                               '/tenant/rules',
                               extra: r.id,
                             ),

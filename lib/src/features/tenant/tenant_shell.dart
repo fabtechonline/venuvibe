@@ -33,11 +33,8 @@ class TenantShell extends ConsumerWidget {
                 case 1:
                   context.go('/tenant/resources');
                 case 2:
-                  context.go('/tenant/scheduler');
-                case 3:
-                  context.go('/tenant/rules');
-                case 4:
-                  context.go('/');
+                  // Push so the customer view gets a back button to here.
+                  context.push('/');
               }
             },
             destinations: [
@@ -60,16 +57,6 @@ class TenantShell extends ConsumerWidget {
                 label: 'Resources',
               ),
               const NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month),
-                label: 'Scheduler',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.tune_outlined),
-                selectedIcon: Icon(Icons.tune),
-                label: 'Rules',
-              ),
-              const NavigationDestination(
                 icon: Icon(Icons.storefront_outlined),
                 selectedIcon: Icon(Icons.storefront),
                 label: 'Customer',
@@ -83,8 +70,6 @@ class TenantShell extends ConsumerWidget {
 
   int _calculateIndex(String location) {
     if (location.startsWith('/tenant/resources')) return 1;
-    if (location.startsWith('/tenant/scheduler')) return 2;
-    if (location.startsWith('/tenant/rules')) return 3;
     return 0;
   }
 }

@@ -16,6 +16,7 @@ import 'package:venue_vibe/src/features/tenant/rules_screen.dart';
 import 'package:venue_vibe/src/features/tenant/scheduler_calendar.dart';
 import 'package:venue_vibe/src/features/tenant/tenant_dashboard.dart';
 import 'package:venue_vibe/src/features/tenant/tenant_shell.dart';
+import 'package:venue_vibe/src/features/tenant/venue_profile_screen.dart';
 import 'package:venue_vibe/src/features/user/availability_calendar.dart';
 import 'package:venue_vibe/src/features/user/checkout_screen.dart';
 import 'package:venue_vibe/src/features/user/confirmation_screen.dart';
@@ -141,23 +142,28 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/tenant/resources',
             builder: (context, state) => const ResourceListScreen(),
           ),
-          GoRoute(
-            path: '/tenant/scheduler',
-            builder: (context, state) => SchedulerCalendar(
-              initialResourceId: state.extra as String?,
-            ),
-          ),
-          GoRoute(
-            path: '/tenant/rules',
-            builder: (context, state) => RulesScreen(
-              initialResourceId: state.extra as String?,
-            ),
-          ),
         ],
+      ),
+      // Pushed full-screen tenant pages (back button in the AppBar).
+      GoRoute(
+        path: '/tenant/scheduler',
+        builder: (context, state) => SchedulerCalendar(
+          initialResourceId: state.extra as String?,
+        ),
+      ),
+      GoRoute(
+        path: '/tenant/rules',
+        builder: (context, state) => RulesScreen(
+          initialResourceId: state.extra as String?,
+        ),
       ),
       GoRoute(
         path: '/tenant/approvals',
         builder: (context, state) => const ApprovalsScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/profile',
+        builder: (context, state) => const VenueProfileScreen(),
       ),
       GoRoute(
         path: '/tenant/resources/edit',

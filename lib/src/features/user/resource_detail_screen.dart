@@ -169,6 +169,61 @@ class ResourceDetailScreen extends ConsumerWidget {
 
                       const SizedBox(height: 20),
 
+                      // ─── Venue Contact ───
+                      if (resource.tenantContactPerson != null ||
+                          resource.tenantPhone != null ||
+                          resource.tenantAddress != null) ...[
+                        Text(
+                          'Venue Contact',
+                          style: theme.textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (resource.tenantContactPerson != null &&
+                                  resource.tenantContactPerson!.isNotEmpty)
+                                _ContactRow(
+                                  icon: Icons.person_outline,
+                                  value: resource.tenantContactPerson!,
+                                ),
+                              if (resource.tenantPhone != null &&
+                                  resource.tenantPhone!.isNotEmpty)
+                                _ContactRow(
+                                  icon: Icons.phone_outlined,
+                                  value: resource.tenantPhone!,
+                                ),
+                              if (resource.tenantEmail != null &&
+                                  resource.tenantEmail!.isNotEmpty)
+                                _ContactRow(
+                                  icon: Icons.email_outlined,
+                                  value: resource.tenantEmail!,
+                                ),
+                              if (resource.tenantAddress != null &&
+                                  resource.tenantAddress!.isNotEmpty)
+                                _ContactRow(
+                                  icon: Icons.location_on_outlined,
+                                  value: [
+                                    resource.tenantAddress,
+                                    resource.tenantCity,
+                                  ]
+                                      .where((s) => s != null && s.isNotEmpty)
+                                      .join(', '),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+
                       // ─── Amenities ───
                       if (resource.amenities.isNotEmpty) ...[
                         Text('Amenities', style: theme.textTheme.titleLarge),
@@ -483,6 +538,26 @@ class _WriteReviewDialogState extends ConsumerState<_WriteReviewDialog> {
               : const Text('Submit'),
         ),
       ],
+    );
+  }
+}
+
+class _ContactRow extends StatelessWidget {
+  const _ContactRow({required this.icon, required this.value});
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey[600]),
+          const SizedBox(width: 10),
+          Expanded(child: Text(value)),
+        ],
+      ),
     );
   }
 }

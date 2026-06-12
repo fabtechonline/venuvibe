@@ -392,6 +392,24 @@ class _ResourceEditorScreenState extends ConsumerState<ResourceEditorScreen> {
                           DropdownMenuItem(value: 30, child: Text('30 min')),
                           DropdownMenuItem(value: 45, child: Text('45 min')),
                           DropdownMenuItem(value: 60, child: Text('1 hour')),
+                          DropdownMenuItem(value: 90, child: Text('1.5 hours')),
+                          DropdownMenuItem(value: 120, child: Text('2 hours')),
+                          DropdownMenuItem(value: 180, child: Text('3 hours')),
+                          DropdownMenuItem(value: 240, child: Text('4 hours')),
+                          DropdownMenuItem(value: 360, child: Text('6 hours')),
+                          DropdownMenuItem(value: 480, child: Text('8 hours')),
+                          DropdownMenuItem(
+                            value: 720,
+                            child: Text('12 hours'),
+                          ),
+                          DropdownMenuItem(
+                            value: 1440,
+                            child: Text('24 hours'),
+                          ),
+                          DropdownMenuItem(
+                            value: 2880,
+                            child: Text('48 hours'),
+                          ),
                         ],
                         onChanged: (v) =>
                             setState(() => _bufferMinutes = v ?? 0),

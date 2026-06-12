@@ -87,10 +87,11 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                         onAction: () => _showDurationDialog(context, r.id),
                       ),
                       _DurationList(
-                          resourceId: r.id,
-                          onEdit: (d) {
-                            _showDurationDialog(context, r.id, existing: d);
-                          }),
+                        resourceId: r.id,
+                        onEdit: (d) {
+                          _showDurationDialog(context, r.id, existing: d);
+                        },
+                      ),
                       const Divider(),
                       _CustomBookingSection(resource: r),
                       const Divider(),
@@ -277,7 +278,7 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                 resourceId: resourceId,
                 name: name,
                 price: double.tryParse(priceCtrl.text) ?? 0,
-                maxQty: (int.tryParse(qtyCtrl.text) ?? 10).clamp(1, 99),
+                maxQty: (int.tryParse(qtyCtrl.text) ?? 10).clamp(1, 999),
               );
               if (existing == null) {
                 await repo.createAddon(addon);
@@ -525,6 +526,7 @@ class _AddonList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final addonsAsync = ref.watch(resourceAddonsProvider(resourceId));
+    final cc = ref.watch(currencyCodeProvider);
     return addonsAsync.when(
       data: (addons) {
         if (addons.isEmpty) {
@@ -537,54 +539,53 @@ class _AddonList extends ConsumerWidget {
           );
         }
         return Column(
-          children: addons
-              .map(
-                (a) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        AppTheme.successGreen.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.add_shopping_cart,
-                      color: AppTheme.successGreen,
-                      size: 20,
+          children: [
+            for (final a in addons)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name on its own line, controls on the row below.
+                    Text(
+                      a.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                  title: Text(a.name),
-                  subtitle: Text('Max ${a.maxQty} per booking'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatPrice(a.price, ref.watch(currencyCodeProvider)),
-                        style: const TextStyle(
-                          color: AppTheme.successGreen,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${formatPrice(a.price, cc)} · '
+                            'Max ${a.maxQty} per booking',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        onPressed: () => onEdit(a),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: AppTheme.errorRed,
-                          size: 20,
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          onPressed: () => onEdit(a),
                         ),
-                        onPressed: () async {
-                          await ref
-                              .read(resourceRepositoryProvider)
-                              .deleteAddon(a.id);
-                          ref.invalidate(resourceAddonsProvider(resourceId));
-                        },
-                      ),
-                    ],
-                  ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppTheme.errorRed,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            await ref
+                                .read(resourceRepositoryProvider)
+                                .deleteAddon(a.id);
+                            ref.invalidate(resourceAddonsProvider(resourceId));
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              )
-              .toList(),
+              ),
+          ],
         );
       },
       loading: () => const CircularProgressIndicator(),

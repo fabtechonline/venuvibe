@@ -195,19 +195,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     for (final a in addons)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    a.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
+                            // Name on its own line; price + stepper below.
+                            Text(
+                              a.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
                                     formatPrice(
                                       a.price,
                                       ref.watch(currencyCodeProvider),
@@ -217,14 +218,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            _QtyStepper(
-                              qty: _addonQty[a.id] ?? 0,
-                              maxQty: a.maxQty,
-                              onChanged: (q) =>
-                                  setState(() => _addonQty[a.id] = q),
+                                ),
+                                _QtyStepper(
+                                  qty: _addonQty[a.id] ?? 0,
+                                  maxQty: a.maxQty,
+                                  onChanged: (q) =>
+                                      setState(() => _addonQty[a.id] = q),
+                                ),
+                              ],
                             ),
                           ],
                         ),

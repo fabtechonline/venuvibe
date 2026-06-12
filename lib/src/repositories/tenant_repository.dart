@@ -103,6 +103,14 @@ class TenantRepository {
     }).eq('id', tenantId);
   }
 
+  /// Partial update of the venue's own profile fields.
+  Future<void> updateTenantProfile(
+    String tenantId,
+    Map<String, dynamic> fields,
+  ) async {
+    await _client.from('tenants').update(fields).eq('id', tenantId);
+  }
+
   // Platform Settings
   Future<PlatformSettings?> getPlatformSettings() async {
     // limit(1) keeps this resilient even if more than one row ever exists,

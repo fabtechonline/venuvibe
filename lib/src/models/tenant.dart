@@ -12,6 +12,7 @@ class Tenant {
     this.timezone = 'UTC',
     this.phone,
     this.email,
+    this.contactPerson,
     this.categoryId,
     this.subscriptionPlanId,
     this.isActive = true,
@@ -31,6 +32,7 @@ class Tenant {
       timezone: json['timezone'] as String? ?? 'UTC',
       phone: json['phone'] as String?,
       email: json['email'] as String?,
+      contactPerson: json['contact_person'] as String?,
       categoryId: json['category_id'] as String?,
       subscriptionPlanId: json['subscription_plan_id'] as String?,
       isActive: json['is_active'] as bool? ?? true,
@@ -49,6 +51,7 @@ class Tenant {
   final String timezone;
   final String? phone;
   final String? email;
+  final String? contactPerson;
   final String? categoryId;
   final String? subscriptionPlanId;
   final bool isActive;
@@ -70,6 +73,7 @@ class Tenant {
         'timezone': timezone,
         'phone': phone,
         'email': email,
+        'contact_person': contactPerson,
         'category_id': categoryId,
         'subscription_plan_id': subscriptionPlanId,
         'is_active': isActive,
