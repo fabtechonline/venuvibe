@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:venue_vibe/src/models/addon.dart';
 import 'package:venue_vibe/src/models/duration_model.dart';
+import 'package:venue_vibe/src/models/pricing_period.dart';
 import 'package:venue_vibe/src/models/resource.dart';
 import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
+import 'package:venue_vibe/src/utils/pricing_periods.dart';
 
 class RulesScreen extends ConsumerStatefulWidget {
   const RulesScreen({super.key, this.initialResourceId});
@@ -82,16 +86,36 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                       ),
                       const Divider(),
                       _SectionHeader(
-                        title: 'Pricing tiers',
-                        actionLabel: 'Add Duration',
-                        onAction: () => _showDurationDialog(context, r.id),
+                        title: 'Pricing seasons',
+                        actionLabel: 'Add Season',
+                        onAction: () => _showPeriodDialog(context, r.id),
                       ),
-                      _DurationList(
+                      _PeriodList(
                         resourceId: r.id,
-                        onEdit: (d) {
-                          _showDurationDialog(context, r.id, existing: d);
-                        },
+                        onEditPeriod: (p) =>
+                            _showPeriodDialog(context, r.id, existing: p),
+                        onAddTier: (p) =>
+                            _showDurationDialog(context, r.id, periodId: p.id),
+                        onEditTier: (p, d) => _showDurationDialog(
+                          context,
+                          r.id,
+                          periodId: p.id,
+                          existing: d,
+                        ),
                       ),
+                      if (allResources.length > 1)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () => _showCopyDialog(
+                              context,
+                              r,
+                              allResources.where((o) => o.id != r.id).toList(),
+                            ),
+                            icon: const Icon(Icons.copy_all_outlined, size: 16),
+                            label: const Text('Copy from another resource'),
+                          ),
+                        ),
                       const Divider(),
                       _CustomBookingSection(resource: r),
                       const Divider(),
@@ -135,9 +159,290 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
     );
   }
 
+  void _showPeriodDialog(
+    BuildContext context,
+    String resourceId, {
+    PricingPeriod? existing,
+  }) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final rateCtrl = TextEditingController(
+      text: existing?.hourlyRate?.toStringAsFixed(2) ?? '',
+    );
+    var start = existing?.startDate;
+    var end = existing?.endDate;
+    String? error;
+    final df = DateFormat('d MMM y');
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          Future<void> pickDate({required bool isStart}) async {
+            final picked = await showDatePicker(
+              context: ctx,
+              initialDate: (isStart ? start : end) ?? DateTime.now(),
+              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+              lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+            );
+            if (picked != null) {
+              setDialogState(() {
+                if (isStart) {
+                  start = dateOnly(picked);
+                } else {
+                  end = dateOnly(picked);
+                }
+              });
+            }
+          }
+
+          Future<void> save() async {
+            final name = nameCtrl.text.trim();
+            if (name.isEmpty || start == null || end == null) {
+              setDialogState(
+                () => error = 'Name, start and end dates are required.',
+              );
+              return;
+            }
+            if (end!.isBefore(start!)) {
+              setDialogState(
+                () => error = 'End date must be on or after the start date.',
+              );
+              return;
+            }
+            final rateText = rateCtrl.text.trim();
+            final rate = rateText.isEmpty ? null : double.tryParse(rateText);
+            if (rateText.isNotEmpty && rate == null) {
+              setDialogState(
+                () => error = 'Hourly rate must be a number, or left empty.',
+              );
+              return;
+            }
+            final repo = ref.read(resourceRepositoryProvider);
+            final candidate = PricingPeriod(
+              id: existing?.id ?? '',
+              resourceId: resourceId,
+              name: name,
+              startDate: start!,
+              endDate: end!,
+              hourlyRate: rate,
+            );
+            try {
+              final others = (await repo.getPricingPeriods(resourceId))
+                  .where((p) => p.id != existing?.id)
+                  .toList();
+              if (findOverlapConflicts(others, [candidate]).isNotEmpty) {
+                setDialogState(
+                  () => error = 'These dates overlap an existing season.',
+                );
+                return;
+              }
+              if (existing == null) {
+                await repo.createPricingPeriod(candidate);
+              } else {
+                await repo.updatePricingPeriod(candidate);
+              }
+            } on PostgrestException catch (e) {
+              setDialogState(
+                () => error = e.code == '23P01'
+                    ? 'These dates overlap an existing season.'
+                    : e.message,
+              );
+              return;
+            }
+            ref
+              ..invalidate(resourcePricingPeriodsProvider(resourceId))
+              ..invalidate(resourceDurationsProvider(resourceId));
+            if (ctx.mounted) Navigator.pop(ctx);
+          }
+
+          return AlertDialog(
+            title: Text(existing == null ? 'Add Season' : 'Edit Season'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Name (e.g. "Summer 2026")',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => pickDate(isStart: true),
+                          icon: const Icon(Icons.event, size: 16),
+                          label: Text(
+                            start == null ? 'Start date' : df.format(start!),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => pickDate(isStart: false),
+                          icon: const Icon(Icons.event, size: 16),
+                          label: Text(
+                            end == null ? 'End date' : df.format(end!),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: rateCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Hourly rate for this season (optional)',
+                      prefixText:
+                          '${currencySymbol(ref.read(currencyCodeProvider))} ',
+                      helperText: "Empty = the venue's default hourly rate",
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      error!,
+                      style: const TextStyle(
+                        color: AppTheme.errorRed,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: save,
+                child: Text(existing == null ? 'Add' : 'Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCopyDialog(
+    BuildContext context,
+    Resource target,
+    List<Resource> others,
+  ) {
+    var sourceId = others.first.id;
+    String? error;
+    var copying = false;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          Future<void> copy() async {
+            setDialogState(() {
+              copying = true;
+              error = null;
+            });
+            try {
+              await ref.read(resourceRepositoryProvider).copyPricingFrom(
+                    sourceResourceId: sourceId,
+                    targetResourceId: target.id,
+                  );
+            } on PricingCopyException catch (e) {
+              setDialogState(() {
+                copying = false;
+                error = e.message;
+              });
+              return;
+            } on PostgrestException catch (e) {
+              setDialogState(() {
+                copying = false;
+                error = e.code == '23P01'
+                    ? 'A copied season overlaps an existing one.'
+                    : e.message;
+              });
+              return;
+            }
+            ref
+              ..invalidate(resourcePricingPeriodsProvider(target.id))
+              ..invalidate(resourceDurationsProvider(target.id));
+            if (ctx.mounted) Navigator.pop(ctx);
+          }
+
+          return AlertDialog(
+            title: Text('Copy seasons to ${target.name}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: sourceId,
+                  decoration: const InputDecoration(labelText: 'Copy from'),
+                  items: others
+                      .map(
+                        (r) => DropdownMenuItem(
+                          value: r.id,
+                          child: Text(r.name, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => sourceId = v);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Copies every season — dates, pricing tiers and hourly '
+                  "overrides. Seasons without their own rate use this venue's "
+                  'default hourly rate.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    error!,
+                    style: const TextStyle(
+                      color: AppTheme.errorRed,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: copying ? null : copy,
+                child: copying
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Copy'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showDurationDialog(
     BuildContext context,
     String resourceId, {
+    required String periodId,
     DurationModel? existing,
   }) {
     final labelCtrl = TextEditingController(text: existing?.label ?? '');
@@ -193,6 +498,7 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                   DurationModel(
                     id: '',
                     resourceId: resourceId,
+                    periodId: periodId,
                     label: labelCtrl.text,
                     minutes: int.tryParse(minsCtrl.text) ?? 60,
                     price: double.tryParse(priceCtrl.text) ?? 0,
@@ -208,7 +514,9 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                   ),
                 );
               }
-              ref.invalidate(resourceDurationsProvider(resourceId));
+              ref
+                ..invalidate(periodDurationsProvider(periodId))
+                ..invalidate(resourceDurationsProvider(resourceId));
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -326,21 +634,195 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _DurationList extends ConsumerWidget {
-  const _DurationList({required this.resourceId, required this.onEdit});
+/// Seasons of one resource: gap warning, then an expandable card per season
+/// holding its tier list.
+class _PeriodList extends ConsumerWidget {
+  const _PeriodList({
+    required this.resourceId,
+    required this.onEditPeriod,
+    required this.onAddTier,
+    required this.onEditTier,
+  });
   final String resourceId;
+  final ValueChanged<PricingPeriod> onEditPeriod;
+  final ValueChanged<PricingPeriod> onAddTier;
+  final void Function(PricingPeriod period, DurationModel tier) onEditTier;
+
+  static final _df = DateFormat('d MMM y');
+
+  String _fmtGap(PricingGap g) => g.start == g.end
+      ? _df.format(g.start)
+      : '${_df.format(g.start)} – ${_df.format(g.end)}';
+
+  String _periodSubtitle(PricingPeriod p, String cc) {
+    final dates = '${_df.format(p.startDate)} – ${_df.format(p.endDate)}';
+    if (p.hourlyRate == null) return dates;
+    return '$dates\nCustom rate: ${formatPrice(p.hourlyRate!, cc)}/hour';
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    PricingPeriod p,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete season?'),
+        content: Text(
+          'This removes "${p.name}" and its pricing tiers. Customers will '
+          'not be able to book dates only this season covers.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(resourceRepositoryProvider).deletePricingPeriod(p.id);
+    ref
+      ..invalidate(resourcePricingPeriodsProvider(resourceId))
+      ..invalidate(resourceDurationsProvider(resourceId));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final periodsAsync = ref.watch(resourcePricingPeriodsProvider(resourceId));
+    final cc = ref.watch(currencyCodeProvider);
+    return periodsAsync.when(
+      data: (periods) {
+        if (periods.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              'No pricing seasons yet — customers cannot book until one '
+              'covers their date',
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          );
+        }
+        final gaps = computeGaps(periods);
+        return Column(
+          children: [
+            if (gaps.isNotEmpty)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 4, bottom: 4),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange[800],
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Days with no pricing (booking blocked): '
+                        '${gaps.map(_fmtGap).join(', ')}',
+                        style: TextStyle(
+                          color: Colors.orange[900],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            for (final p in periods)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(left: 8),
+                shape: const Border(),
+                title: Text(
+                  p.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  _periodSubtitle(p, cc),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      onPressed: () => onEditPeriod(p),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: AppTheme.errorRed,
+                        size: 20,
+                      ),
+                      onPressed: () => _confirmDelete(context, ref, p),
+                    ),
+                  ],
+                ),
+                children: [
+                  _DurationList(
+                    resourceId: resourceId,
+                    period: p,
+                    onEdit: (d) => onEditTier(p, d),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => onAddTier(p),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Add Duration'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(12),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text('$e'),
+    );
+  }
+}
+
+class _DurationList extends ConsumerWidget {
+  const _DurationList({
+    required this.resourceId,
+    required this.period,
+    required this.onEdit,
+  });
+  final String resourceId;
+  final PricingPeriod period;
   final ValueChanged<DurationModel> onEdit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final durationsAsync = ref.watch(resourceDurationsProvider(resourceId));
+    final durationsAsync = ref.watch(periodDurationsProvider(period.id));
     return durationsAsync.when(
       data: (durs) {
         if (durs.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(12),
             child: Text(
-              'No pricing tiers configured yet',
+              'No pricing tiers in this season yet',
               style: TextStyle(color: Colors.grey[500]),
             ),
           );
@@ -386,9 +868,11 @@ class _DurationList extends ConsumerWidget {
                           await ref
                               .read(resourceRepositoryProvider)
                               .deleteDuration(d.id);
-                          ref.invalidate(
-                            resourceDurationsProvider(resourceId),
-                          );
+                          ref
+                            ..invalidate(periodDurationsProvider(period.id))
+                            ..invalidate(
+                              resourceDurationsProvider(resourceId),
+                            );
                         },
                       ),
                     ],
@@ -480,7 +964,8 @@ class _CustomBookingSectionState extends ConsumerState<_CustomBookingSection> {
         const SizedBox(height: 4),
         Text(
           'Let customers request their own date & time range at an hourly '
-          'rate. You approve every request before they pay.',
+          'rate. You approve every request before they pay. This is the '
+          'default rate — individual seasons can override it.',
           style: TextStyle(color: Colors.grey[600], fontSize: 12),
         ),
         const SizedBox(height: 8),

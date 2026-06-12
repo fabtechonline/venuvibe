@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/pricing_period.dart';
 import 'package:venue_vibe/src/repositories/favorite_repository.dart';
 import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/repositories/review_repository.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
+import 'package:venue_vibe/src/utils/pricing_periods.dart';
 import 'package:venue_vibe/src/widgets/star_rating.dart';
 
 class ResourceDetailScreen extends ConsumerWidget {
@@ -23,6 +25,15 @@ class ResourceDetailScreen extends ConsumerWidget {
     );
     context.go('/login?from=${Uri.encodeComponent('/resource/$resourceId')}');
     return true;
+  }
+
+  /// The first season starting today or later (used when none covers today).
+  PricingPeriod? _nextUpcoming(List<PricingPeriod> periods) {
+    final today = dateOnly(DateTime.now());
+    for (final p in periods) {
+      if (p.isActive && !dateOnly(p.startDate).isBefore(today)) return p;
+    }
+    return null;
   }
 
   @override
@@ -46,6 +57,13 @@ class ResourceDetailScreen extends ConsumerWidget {
 
         final resource = snapshot.data!;
         final durations = ref.watch(resourceDurationsProvider(resourceId));
+        // Tiers are seasonal: show the season covering today, else the next
+        // upcoming one (a resource can have the same label at two prices).
+        final periods =
+            ref.watch(resourcePricingPeriodsProvider(resourceId)).valueOrNull ??
+                const <PricingPeriod>[];
+        final displayPeriod = findCoveringPeriod(periods, DateTime.now()) ??
+            _nextUpcoming(periods);
         final favIds = ref.watch(favoriteIdsProvider).valueOrNull ?? <String>{};
         final isFav = favIds.contains(resourceId);
         final rating =
@@ -260,49 +278,60 @@ class ResourceDetailScreen extends ConsumerWidget {
                       Text('Pricing', style: theme.textTheme.titleLarge),
                       const SizedBox(height: 12),
                       durations.when(
-                        data: (durs) => Column(
-                          children: durs
-                              .map(
-                                (d) => Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.grey.shade200,
+                        data: (allDurs) {
+                          final durs = allDurs
+                              .where((d) => d.periodId == displayPeriod?.id)
+                              .toList();
+                          if (durs.isEmpty) {
+                            return Text(
+                              'No pricing available for upcoming dates',
+                              style: TextStyle(color: Colors.grey[600]),
+                            );
+                          }
+                          return Column(
+                            children: durs
+                                .map(
+                                  (d) => Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.schedule,
+                                          color: AppTheme.primaryBlue,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            d.label,
+                                            style: theme.textTheme.titleMedium,
+                                          ),
+                                        ),
+                                        Text(
+                                          formatPrice(
+                                            d.price,
+                                            ref.watch(currencyCodeProvider),
+                                          ),
+                                          style: theme.textTheme.titleLarge
+                                              ?.copyWith(
+                                            color: AppTheme.primaryBlue,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.schedule,
-                                        color: AppTheme.primaryBlue,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          d.label,
-                                          style: theme.textTheme.titleMedium,
-                                        ),
-                                      ),
-                                      Text(
-                                        formatPrice(
-                                          d.price,
-                                          ref.watch(currencyCodeProvider),
-                                        ),
-                                        style: theme.textTheme.titleLarge
-                                            ?.copyWith(
-                                          color: AppTheme.primaryBlue,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
+                                )
+                                .toList(),
+                          );
+                        },
                         loading: () => const CircularProgressIndicator(),
                         error: (e, _) => Text('Error: $e'),
                       ),

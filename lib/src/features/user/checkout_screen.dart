@@ -74,10 +74,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } on PostgrestException catch (e) {
       // 23P01 = exclusion_violation from the bookings_no_overlap constraint
-      // (migration 0001): someone grabbed this slot first.
+      // (migration 0001): someone grabbed this slot first. The "No pricing"
+      // rejection (migration 0016) is already customer-facing as-is.
       final message = e.code == '23P01'
           ? 'Sorry, that time slot was just booked. Please pick another.'
-          : 'Booking failed: ${e.message}';
+          : e.message.contains('No pricing')
+              ? e.message
+              : 'Booking failed: ${e.message}';
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(message)));

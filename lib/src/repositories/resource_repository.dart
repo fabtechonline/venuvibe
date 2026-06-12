@@ -5,10 +5,12 @@ import 'package:venue_vibe/src/models/addon.dart';
 import 'package:venue_vibe/src/models/busy_slot.dart';
 import 'package:venue_vibe/src/models/category.dart';
 import 'package:venue_vibe/src/models/duration_model.dart';
+import 'package:venue_vibe/src/models/pricing_period.dart';
 import 'package:venue_vibe/src/models/resource.dart';
 import 'package:venue_vibe/src/models/resource_hours.dart';
 import 'package:venue_vibe/src/models/slot_block.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
+import 'package:venue_vibe/src/utils/pricing_periods.dart';
 
 final resourceRepositoryProvider = Provider<ResourceRepository>((ref) {
   return ResourceRepository(SupabaseConfig.client);
@@ -64,6 +66,27 @@ final resourceAddonsProvider =
     FutureProvider.family<List<ResourceAddon>, String>((ref, resourceId) async {
   return ref.read(resourceRepositoryProvider).getAddons(resourceId);
 });
+
+/// Active pricing seasons of a resource, ordered by start date.
+final resourcePricingPeriodsProvider =
+    FutureProvider.family<List<PricingPeriod>, String>((ref, resourceId) async {
+  return ref.read(resourceRepositoryProvider).getPricingPeriods(resourceId);
+});
+
+/// Active duration tiers belonging to one pricing season.
+final periodDurationsProvider =
+    FutureProvider.family<List<DurationModel>, String>((ref, periodId) async {
+  return ref.read(resourceRepositoryProvider).getDurationsForPeriod(periodId);
+});
+
+/// Season-copy preflight failure with a user-readable reason.
+class PricingCopyException implements Exception {
+  PricingCopyException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class ResourceRepository {
   ResourceRepository(this._client);
@@ -165,8 +188,19 @@ class ResourceRepository {
     return DurationModel.fromJson(data);
   }
 
+  /// Soft-deactivates when the tier is referenced by booking history
+  /// (bookings.duration_id is a plain FK); hard-deletes otherwise.
   Future<void> deleteDuration(String id) async {
-    await _client.from('durations').delete().eq('id', id);
+    final used = await _client
+        .from('bookings')
+        .select('id')
+        .eq('duration_id', id)
+        .limit(1);
+    if (used.isEmpty) {
+      await _client.from('durations').delete().eq('id', id);
+    } else {
+      await _client.from('durations').update({'is_active': false}).eq('id', id);
+    }
   }
 
   /// Partial update of the custom-booking settings only.
@@ -186,6 +220,116 @@ class ResourceRepository {
         .from('durations')
         .update(duration.toJson())
         .eq('id', duration.id);
+  }
+
+  // Pricing periods (seasons)
+  Future<List<PricingPeriod>> getPricingPeriods(String resourceId) async {
+    final data = await _client
+        .from('pricing_periods')
+        .select()
+        .eq('resource_id', resourceId)
+        .eq('is_active', true)
+        .order('start_date', ascending: true);
+    return data.map(PricingPeriod.fromJson).toList();
+  }
+
+  Future<List<DurationModel>> getDurationsForPeriod(String periodId) async {
+    final data = await _client
+        .from('durations')
+        .select()
+        .eq('period_id', periodId)
+        .eq('is_active', true)
+        .order('minutes', ascending: true);
+    return data.map(DurationModel.fromJson).toList();
+  }
+
+  Future<PricingPeriod> createPricingPeriod(PricingPeriod period) async {
+    final data = await _client
+        .from('pricing_periods')
+        .insert(period.toJson())
+        .select()
+        .single();
+    return PricingPeriod.fromJson(data);
+  }
+
+  Future<void> updatePricingPeriod(PricingPeriod period) async {
+    await _client
+        .from('pricing_periods')
+        .update(period.toJson())
+        .eq('id', period.id);
+  }
+
+  /// Soft-deactivates when any of the season's tiers are referenced by
+  /// booking history; hard-deletes otherwise (cascade removes its tiers).
+  Future<void> deletePricingPeriod(String id) async {
+    final tiers =
+        await _client.from('durations').select('id').eq('period_id', id);
+    final tierIds =
+        tiers.map((row) => row['id']! as String).toList(growable: false);
+    var used = false;
+    if (tierIds.isNotEmpty) {
+      final bookings = await _client
+          .from('bookings')
+          .select('id')
+          .inFilter('duration_id', tierIds)
+          .limit(1);
+      used = bookings.isNotEmpty;
+    }
+    if (used) {
+      await _client
+          .from('pricing_periods')
+          .update({'is_active': false}).eq('id', id);
+    } else {
+      await _client.from('pricing_periods').delete().eq('id', id);
+    }
+  }
+
+  /// Copies all active seasons of [sourceResourceId] — date ranges, hourly
+  /// overrides AND their tiers — onto [targetResourceId]. Fails up-front
+  /// (writing nothing) when any copied range would overlap an existing one.
+  Future<void> copyPricingFrom({
+    required String sourceResourceId,
+    required String targetResourceId,
+  }) async {
+    final source = await getPricingPeriods(sourceResourceId);
+    if (source.isEmpty) {
+      throw PricingCopyException(
+        'That resource has no pricing seasons to copy.',
+      );
+    }
+    final existing = await getPricingPeriods(targetResourceId);
+    final conflicts = findOverlapConflicts(existing, source);
+    if (conflicts.isNotEmpty) {
+      throw PricingCopyException(
+        'Cannot copy — overlapping seasons:\n${conflicts.join('\n')}',
+      );
+    }
+    for (final p in source) {
+      final created = await createPricingPeriod(
+        PricingPeriod(
+          id: '',
+          resourceId: targetResourceId,
+          name: p.name,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          hourlyRate: p.hourlyRate,
+        ),
+      );
+      final tiers = await getDurationsForPeriod(p.id);
+      if (tiers.isNotEmpty) {
+        await _client.from('durations').insert([
+          for (final t in tiers)
+            {
+              'resource_id': targetResourceId,
+              'period_id': created.id,
+              'label': t.label,
+              'minutes': t.minutes,
+              'price': t.price,
+              'is_active': true,
+            },
+        ]);
+      }
+    }
   }
 
   // Per-weekday trading hours

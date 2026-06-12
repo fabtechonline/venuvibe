@@ -12,6 +12,7 @@ import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
 import 'package:venue_vibe/src/utils/pricing.dart';
+import 'package:venue_vibe/src/utils/pricing_periods.dart';
 import 'package:venue_vibe/src/utils/slot_generator.dart';
 
 enum _PickMode { slots, custom }
@@ -86,8 +87,17 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
     final windows = resource == null
         ? const <DayWindow>[]
         : windowsForWeekday(hours, _selectedDay.weekday, resource);
-    final customEnabled = (resource?.customSelectorEnabled ?? false) &&
-        resource?.hourlyRate != null;
+
+    // Seasonal pricing: the selected day must fall inside an active pricing
+    // period, which scopes the tiers and may override the hourly rate.
+    final periods = ref
+        .watch(resourcePricingPeriodsProvider(widget.resourceId))
+        .valueOrNull;
+    final covering =
+        periods == null ? null : findCoveringPeriod(periods, _selectedDay);
+    final effectiveRate = covering?.hourlyRate ?? resource?.hourlyRate;
+    final customEnabled =
+        (resource?.customSelectorEnabled ?? false) && effectiveRate != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -132,176 +142,227 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
             ),
           ),
 
-          // ─── Slots | Custom toggle (when the venue allows custom) ───
-          if (customEnabled)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: SegmentedButton<_PickMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: _PickMode.slots,
-                    icon: Icon(Icons.grid_view, size: 16),
-                    label: Text('Time slots'),
-                  ),
-                  ButtonSegment(
-                    value: _PickMode.custom,
-                    icon: Icon(Icons.tune, size: 16),
-                    label: Text('Custom time'),
-                  ),
-                ],
-                selected: {_mode},
-                onSelectionChanged: (s) => setState(() => _mode = s.first),
-                showSelectedIcon: false,
-                style: const ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ),
-          if (customEnabled) const SizedBox(height: 8),
-
-          if (_mode == _PickMode.custom && customEnabled)
+          // ─── Seasonal pricing gate: no covering period → no booking ───
+          if (periods == null)
+            const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (covering == null)
             Expanded(
-              child: _CustomRangePanel(
-                resource: resource!,
-                windows: windows,
-                busy: _busy,
-                day: _selectedDay,
-                start: _customStart,
-                end: _customEnd,
-                onPickStart: () async {
-                  final t = await showTimePicker(
-                    context: context,
-                    initialTime:
-                        _customStart ?? const TimeOfDay(hour: 9, minute: 0),
-                  );
-                  if (t != null) setState(() => _customStart = t);
-                },
-                onPickEnd: () async {
-                  final t = await showTimePicker(
-                    context: context,
-                    initialTime:
-                        _customEnd ?? const TimeOfDay(hour: 11, minute: 0),
-                  );
-                  if (t != null) setState(() => _customEnd = t);
-                },
-                onRequest: (start, end, price) {
-                  if (_requireSignIn()) return;
-                  final hours =
-                      (end.difference(start).inMinutes / 60).toStringAsFixed(1);
-                  context.push(
-                    '/checkout',
-                    extra: {
-                      'resourceId': widget.resourceId,
-                      'startTime': start,
-                      'endTime': end,
-                      'durationLabel': 'Custom (${hours}h)',
-                      'price': price,
-                      'isCustom': true,
-                    },
-                  );
-                },
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.money_off_outlined,
+                        size: 48,
+                        color: Colors.orange[700],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No price',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: Colors.orange[800]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'No pricing has been set for this date. '
+                        'Please choose another date.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             )
           else ...[
-            // ─── Duration Selector (tiers below the minimum are hidden) ───
-            SizedBox(
-              height: 52,
-              child: durationsAsync.when(
-                data: (allDurs) {
-                  final cc = ref.watch(currencyCodeProvider);
-                  final minMinutes = resource?.minBookingMinutes ?? 0;
-                  final durs =
-                      allDurs.where((d) => d.minutes >= minMinutes).toList();
-                  if (durs.isNotEmpty &&
-                      (_selectedDuration == null ||
-                          !durs.any((d) => d.id == _selectedDuration!.id))) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() => _selectedDuration = durs.first);
-                      }
-                    });
-                  }
-                  if (durs.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No bookable durations configured',
-                        style: TextStyle(color: Colors.grey[500]),
-                      ),
-                    );
-                  }
-                  return ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: durs
-                        .map(
-                          (d) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(
-                                '${d.label} - '
-                                '${formatPriceShort(d.price, cc)}',
-                              ),
-                              selected: _selectedDuration?.id == d.id,
-                              onSelected: (_) {
-                                setState(() => _selectedDuration = d);
-                              },
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('$e')),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // ─── Legend ───
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _LegendDot(color: AppTheme.successGreen, label: 'Available'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: AppTheme.errorRed, label: 'Booked'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: AppTheme.neutralGrey, label: 'Blocked'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: AppTheme.warningOrange, label: 'Pending'),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // ─── Time Slots Grid ───
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _SlotsGrid(
-                      windows: windows,
-                      busy: _busy,
-                      day: _selectedDay,
-                      resource: resource,
-                      duration: _selectedDuration,
-                      onTapSlot: (start, end) {
-                        if (_requireSignIn()) return;
-                        context.push(
-                          '/checkout',
-                          extra: {
-                            'resourceId': widget.resourceId,
-                            'startTime': start,
-                            'endTime': end,
-                            'durationLabel': _selectedDuration!.label,
-                            'price': _selectedDuration!.price,
-                            'durationId': _selectedDuration!.id,
-                          },
-                        );
-                      },
+            // ─── Slots | Custom toggle (when the venue allows custom) ───
+            if (customEnabled)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SegmentedButton<_PickMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _PickMode.slots,
+                      icon: Icon(Icons.grid_view, size: 16),
+                      label: Text('Time slots'),
                     ),
-            ),
+                    ButtonSegment(
+                      value: _PickMode.custom,
+                      icon: Icon(Icons.tune, size: 16),
+                      label: Text('Custom time'),
+                    ),
+                  ],
+                  selected: {_mode},
+                  onSelectionChanged: (s) => setState(() => _mode = s.first),
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+            if (customEnabled) const SizedBox(height: 8),
+
+            if (_mode == _PickMode.custom && customEnabled)
+              Expanded(
+                child: _CustomRangePanel(
+                  resource: resource!,
+                  hourlyRate: effectiveRate,
+                  windows: windows,
+                  busy: _busy,
+                  day: _selectedDay,
+                  start: _customStart,
+                  end: _customEnd,
+                  onPickStart: () async {
+                    final t = await showTimePicker(
+                      context: context,
+                      initialTime:
+                          _customStart ?? const TimeOfDay(hour: 9, minute: 0),
+                    );
+                    if (t != null) setState(() => _customStart = t);
+                  },
+                  onPickEnd: () async {
+                    final t = await showTimePicker(
+                      context: context,
+                      initialTime:
+                          _customEnd ?? const TimeOfDay(hour: 11, minute: 0),
+                    );
+                    if (t != null) setState(() => _customEnd = t);
+                  },
+                  onRequest: (start, end, price) {
+                    if (_requireSignIn()) return;
+                    final hours = (end.difference(start).inMinutes / 60)
+                        .toStringAsFixed(1);
+                    context.push(
+                      '/checkout',
+                      extra: {
+                        'resourceId': widget.resourceId,
+                        'startTime': start,
+                        'endTime': end,
+                        'durationLabel': 'Custom (${hours}h)',
+                        'price': price,
+                        'isCustom': true,
+                      },
+                    );
+                  },
+                ),
+              )
+            else ...[
+              // ─── Duration Selector (tiers below the minimum are hidden) ───
+              SizedBox(
+                height: 52,
+                child: durationsAsync.when(
+                  data: (allDurs) {
+                    final cc = ref.watch(currencyCodeProvider);
+                    final minMinutes = resource?.minBookingMinutes ?? 0;
+                    // Only this season's tiers, at or above the minimum.
+                    final durs = allDurs
+                        .where(
+                          (d) =>
+                              d.minutes >= minMinutes &&
+                              d.periodId == covering.id,
+                        )
+                        .toList();
+                    if (durs.isNotEmpty &&
+                        (_selectedDuration == null ||
+                            !durs.any((d) => d.id == _selectedDuration!.id))) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _selectedDuration = durs.first);
+                        }
+                      });
+                    }
+                    if (durs.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No bookable durations configured',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      );
+                    }
+                    return ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      children: durs
+                          .map(
+                            (d) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(
+                                  '${d.label} - '
+                                  '${formatPriceShort(d.price, cc)}',
+                                ),
+                                selected: _selectedDuration?.id == d.id,
+                                onSelected: (_) {
+                                  setState(() => _selectedDuration = d);
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('$e')),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // ─── Legend ───
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    _LegendDot(
+                      color: AppTheme.successGreen,
+                      label: 'Available',
+                    ),
+                    SizedBox(width: 12),
+                    _LegendDot(color: AppTheme.errorRed, label: 'Booked'),
+                    SizedBox(width: 12),
+                    _LegendDot(color: AppTheme.neutralGrey, label: 'Blocked'),
+                    SizedBox(width: 12),
+                    _LegendDot(color: AppTheme.warningOrange, label: 'Pending'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // ─── Time Slots Grid ───
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _SlotsGrid(
+                        windows: windows,
+                        busy: _busy,
+                        day: _selectedDay,
+                        resource: resource,
+                        duration: _selectedDuration,
+                        onTapSlot: (start, end) {
+                          if (_requireSignIn()) return;
+                          context.push(
+                            '/checkout',
+                            extra: {
+                              'resourceId': widget.resourceId,
+                              'startTime': start,
+                              'endTime': end,
+                              'durationLabel': _selectedDuration!.label,
+                              'price': _selectedDuration!.price,
+                              'durationId': _selectedDuration!.id,
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
           ],
         ],
       ),
@@ -427,6 +488,7 @@ class _SlotsGrid extends StatelessWidget {
 class _CustomRangePanel extends ConsumerWidget {
   const _CustomRangePanel({
     required this.resource,
+    required this.hourlyRate,
     required this.windows,
     required this.busy,
     required this.day,
@@ -437,6 +499,9 @@ class _CustomRangePanel extends ConsumerWidget {
     required this.onRequest,
   });
   final Resource resource;
+
+  /// Effective rate for the selected day (seasonal override or default).
+  final double hourlyRate;
   final List<DayWindow> windows;
   final List<BusySlot> busy;
   final DateTime day;
@@ -471,7 +536,7 @@ class _CustomRangePanel extends ConsumerWidget {
       );
       if (problem == null) {
         price = customBasePrice(
-          resource.hourlyRate!,
+          hourlyRate,
           e.difference(s).inMinutes,
         );
       }
@@ -500,7 +565,7 @@ class _CustomRangePanel extends ConsumerWidget {
                   Text(
                     'Hours: $hoursLabel · Min '
                     '${resource.minBookingMinutes} min · '
-                    '${formatPrice(resource.hourlyRate ?? 0, cc)}/hour',
+                    '${formatPrice(hourlyRate, cc)}/hour',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   const SizedBox(height: 12),
