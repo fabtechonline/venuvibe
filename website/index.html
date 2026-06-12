@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VenueVibe — Find &amp; book sports courts, studios and event venues</title>
+  <meta name="description" content="VenueVibe lets you discover and book sports courts, wellness studios and event halls in seconds. Venue owner? List your space and manage bookings, pricing seasons and payments in one place.">
+  <meta property="og:title" content="VenueVibe — Find &amp; book venues in seconds">
+  <meta property="og:description" content="Discover and book sports courts, studios and event halls. Owners: list your venue and manage everything in one place.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📍</text></svg>">
+</head>
+<body>
+
+  <!-- ───────────────────────── Navigation ───────────────────────── -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#top">Venue<span>Vibe</span></a>
+      <nav class="nav-links">
+        <a href="#venues">Find a venue</a>
+        <a href="#how">How it works</a>
+        <a href="#owners">For venue owners</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost" href="#app">Get the app</a>
+        <a class="btn btn-primary" href="#owners">List your venue</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───────────────────────── Hero ───────────────────────── -->
+  <section class="hero" id="top">
+    <div class="container hero-inner">
+      <h1>Book the perfect space,<br>in <em>seconds</em>.</h1>
+      <p class="hero-sub">
+        Sports courts, wellness studios and event halls — live availability,
+        seasonal pricing and instant confirmation.
+      </p>
+      <div class="hero-search" role="search">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14"/></svg>
+        <input id="heroSearch" type="search" autocomplete="off"
+               placeholder="Search venues, sports, studios, halls…"
+               aria-label="Search venues">
+        <button class="btn btn-primary" id="heroSearchBtn">Search</button>
+      </div>
+      <div class="hero-stats" id="heroStats" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── Venue browser ───────────────────────── -->
+  <main class="container" id="venues">
+    <div class="browser-head">
+      <div>
+        <h2>Explore venues</h2>
+        <p class="muted" id="resultCount">Loading venues…</p>
+      </div>
+      <div class="browser-controls">
+        <input id="filterSearch" type="search" autocomplete="off"
+               placeholder="Filter results…" aria-label="Filter venues">
+        <select id="sortSelect" aria-label="Sort venues">
+          <option value="name-asc">Name · A → Z</option>
+          <option value="name-desc">Name · Z → A</option>
+          <option value="price-asc">Price · low → high</option>
+          <option value="price-desc">Price · high → low</option>
+          <option value="rating-desc">Rating · best first</option>
+          <option value="newest">Newest first</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="chips" id="categoryChips" role="tablist" aria-label="Filter by category"></div>
+
+    <div class="grid" id="venueGrid">
+      <!-- skeletons while loading -->
+      <div class="card skeleton"></div>
+      <div class="card skeleton"></div>
+      <div class="card skeleton"></div>
+      <div class="card skeleton"></div>
+      <div class="card skeleton"></div>
+      <div class="card skeleton"></div>
+    </div>
+    <div class="empty" id="emptyState" hidden>
+      <p>😕 No venues match your search.</p>
+      <button class="btn btn-ghost" id="clearFilters">Clear filters</button>
+    </div>
+  </main>
+
+  <!-- ───────────────────────── How it works ───────────────────────── -->
+  <section class="band" id="how">
+    <div class="container">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-no">1</div>
+          <h3>Search</h3>
+          <p>Browse venues by sport, category or name — see photos, ratings
+             and live seasonal pricing before you commit.</p>
+        </div>
+        <div class="step">
+          <div class="step-no">2</div>
+          <h3>Pick a time</h3>
+          <p>Choose an open time slot, or request a custom time range —
+             the venue approves it before you pay a cent.</p>
+        </div>
+        <div class="step">
+          <div class="step-no">3</div>
+          <h3>Play, train, celebrate</h3>
+          <p>Instant confirmation, email receipts, easy rescheduling and
+             weekly repeat bookings when you find your groove.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── App CTA ───────────────────────── -->
+  <section class="band band-light" id="app">
+    <div class="container split">
+      <div>
+        <h2>Booking is in the app — for now</h2>
+        <p class="muted">
+          Web booking is on its way. Until then, grab the VenueVibe app to
+          book slots, request custom times, manage your reservations and get
+          notified the moment a venue approves your request.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg"
+             href="https://github.com/fabtechonline/venuvibe/releases/latest"
+             target="_blank" rel="noopener">⬇ Download the Android app</a>
+        </div>
+        <p class="finePrint">Early-access build for testers · iOS coming later</p>
+      </div>
+      <div class="phone-mock" aria-hidden="true">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="pm-pill"></div>
+            <div class="pm-card"></div>
+            <div class="pm-card short"></div>
+            <div class="pm-card"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── For owners ───────────────────────── -->
+  <section class="band band-dark" id="owners">
+    <div class="container">
+      <div class="owners-head">
+        <h2>Own a venue? Put it to work.</h2>
+        <p>
+          List your courts, studios or halls on VenueVibe and run the whole
+          operation from your phone — no spreadsheets, no phone tag.
+        </p>
+      </div>
+      <div class="perks">
+        <div class="perk"><h3>📅 Smart scheduling</h3><p>Weekly trading hours, breaks, buffers and maintenance blocks per resource.</p></div>
+        <div class="perk"><h3>🌞 Seasonal pricing</h3><p>Different rates per date range — peak season, off-peak, festive specials.</p></div>
+        <div class="perk"><h3>✅ Approve custom requests</h3><p>Customers request odd hours; you approve (and re-price) before they pay.</p></div>
+        <div class="perk"><h3>📧 Your own branded emails</h3><p>Confirmations, receipts and status updates sent from your venue's email address.</p></div>
+        <div class="perk"><h3>🛒 Add-on upsells</h3><p>Racquets, equipment, chairs, catering extras — sold with every booking.</p></div>
+        <div class="perk"><h3>📊 One dashboard</h3><p>Bookings, revenue, approvals and invoices in a single tenant portal.</p></div>
+      </div>
+      <div class="cta-row center">
+        <a class="btn btn-primary btn-lg"
+           href="https://github.com/fabtechonline/venuvibe/releases/latest"
+           target="_blank" rel="noopener">Register your venue — free</a>
+        <a class="btn btn-outline btn-lg" href="mailto:support@venuevibe.co.za?subject=Listing%20my%20venue%20on%20VenueVibe">Talk to us</a>
+      </div>
+      <p class="finePrint center">
+        Download the app, sign up as a <b>Facility&nbsp;Manager</b> and your
+        venue can take bookings today.
+      </p>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── Footer ───────────────────────── -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <div class="brand">Venue<span>Vibe</span></div>
+        <p class="muted">Find it. Book it. Play.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#venues">Find a venue</a>
+        <a href="#owners">List your venue</a>
+        <a href="https://github.com/fabtechonline/venuvibe/releases/latest" target="_blank" rel="noopener">Get the app</a>
+        <a href="mailto:support@venuevibe.co.za">support@venuevibe.co.za</a>
+      </div>
+    </div>
+    <div class="container copyright">© <span id="year"></span> VenueVibe. All rights reserved.</div>
+  </footer>
+
+  <!-- ───────────────────────── Venue detail modal ───────────────────────── -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
