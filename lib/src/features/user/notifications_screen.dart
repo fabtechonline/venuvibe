@@ -111,6 +111,12 @@ class NotificationsScreen extends ConsumerWidget {
         return Icons.payments_outlined;
       case 'cancellation':
         return Icons.event_busy;
+      case 'booking_request':
+        return Icons.fact_check_outlined;
+      case 'booking_approved':
+        return Icons.check_circle_outline;
+      case 'booking_rejected':
+        return Icons.cancel_outlined;
       default:
         return Icons.notifications_outlined;
     }
