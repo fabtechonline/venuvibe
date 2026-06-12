@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:venue_vibe/src/models/booking.dart';
 import 'package:venue_vibe/src/repositories/booking_repository.dart';
@@ -195,6 +196,30 @@ class _BookingList extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (b.isRecurring) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.repeat, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Weekly series',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ],
+                if (b.isAwaitingPayment && b.paymentDueAt != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pay by ${dateFormat.format(b.paymentDueAt!)}, '
+                    '${timeFormat.format(b.paymentDueAt!)} '
+                    'or the slot is released',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppTheme.warningOrange),
+                  ),
+                ],
                 if (b.discountAmount > 0) ...[
                   const SizedBox(height: 6),
                   Text(
@@ -243,6 +268,24 @@ class _BookingList extends ConsumerWidget {
                         label: const Text('Pay now'),
                       ),
                       const SizedBox(width: 8),
+                    ],
+                    if (showCancel &&
+                        b.isReschedulableWithin(windowHours) &&
+                        b.resourceId != null) ...[
+                      TextButton(
+                        onPressed: () => context.push(
+                          '/resource/${b.resourceId}/availability',
+                          extra: {
+                            'rescheduleBookingId': b.id,
+                            'rescheduleMinutes':
+                                b.endTime.difference(b.startTime).inMinutes,
+                            'rescheduleLabel':
+                                '${dateFormat.format(b.startTime)}, '
+                                    '${timeFormat.format(b.startTime)}',
+                          },
+                        ),
+                        child: const Text('Reschedule'),
+                      ),
                     ],
                     if (showCancel && b.isCancellableWithin(windowHours))
                       TextButton(

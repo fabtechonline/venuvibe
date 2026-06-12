@@ -17,6 +17,8 @@ class Booking {
     this.basePrice,
     this.addonsTotal = 0,
     this.discountAmount = 0,
+    this.paymentDueAt,
+    this.recurringGroupId,
     this.resourceName,
     this.tenantName,
     this.userName,
@@ -45,6 +47,10 @@ class Booking {
       basePrice: (json['base_price'] as num?)?.toDouble(),
       addonsTotal: (json['addons_total'] as num?)?.toDouble() ?? 0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
+      paymentDueAt: json['payment_due_at'] == null
+          ? null
+          : DateTime.parse(json['payment_due_at'] as String).toLocal(),
+      recurringGroupId: json['recurring_group_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       resourceName: resourcesJson?['name'] as String?,
       tenantName: tenantsJson?['name'] as String?,
@@ -67,6 +73,12 @@ class Booking {
   final double? basePrice;
   final double addonsTotal;
   final double discountAmount;
+
+  /// Deadline to pay an approved custom booking before the slot is released.
+  final DateTime? paymentDueAt;
+
+  /// Set on every booking of one weekly series.
+  final String? recurringGroupId;
   final DateTime createdAt;
 
   // Joined fields
@@ -104,6 +116,16 @@ class Booking {
 
   /// Custom request declined by the venue.
   bool get isRejected => status == 'rejected';
+
+  /// Part of a weekly recurring series.
+  bool get isRecurring => recurringGroupId != null;
+
+  /// Whether the customer can move this booking to a new slot of the same
+  /// length (confirmed slot bookings only, same window as cancellation).
+  bool isReschedulableWithin(int windowHours) =>
+      status == 'confirmed' &&
+      durationId != null &&
+      DateTime.now().isBefore(cancellationDeadline(windowHours));
 
   /// The moment after which free cancellation is no longer allowed
   /// (i.e. [windowHours] before the booking starts).

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:venue_vibe/src/core/supabase_config.dart';
 import 'package:venue_vibe/src/models/busy_slot.dart';
 import 'package:venue_vibe/src/models/duration_model.dart';
 import 'package:venue_vibe/src/models/resource.dart';
 import 'package:venue_vibe/src/models/resource_hours.dart';
+import 'package:venue_vibe/src/repositories/booking_repository.dart';
 import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
@@ -18,8 +20,20 @@ import 'package:venue_vibe/src/utils/slot_generator.dart';
 enum _PickMode { slots, custom }
 
 class AvailabilityCalendar extends ConsumerStatefulWidget {
-  const AvailabilityCalendar({required this.resourceId, super.key});
+  const AvailabilityCalendar({
+    required this.resourceId,
+    this.rescheduleBookingId,
+    this.rescheduleMinutes,
+    this.rescheduleLabel,
+    super.key,
+  });
   final String resourceId;
+
+  /// When set, the screen moves this booking instead of creating a new one:
+  /// slots only, tiers locked to [rescheduleMinutes], tap = reschedule.
+  final String? rescheduleBookingId;
+  final int? rescheduleMinutes;
+  final String? rescheduleLabel;
 
   @override
   ConsumerState<AvailabilityCalendar> createState() =>
@@ -62,6 +76,36 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
     }
   }
 
+  /// Moves the booking being rescheduled to the tapped slot, then returns
+  /// to My Bookings. The server reprices from the new date's season.
+  Future<void> _reschedule(DateTime start, DateTime end) async {
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .rescheduleBooking(widget.rescheduleBookingId!, start, end);
+      ref.invalidate(userBookingsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Booking moved.')),
+        );
+        context.pop();
+      }
+    } on PostgrestException catch (e) {
+      final message = e.code == '23P01'
+          ? 'Sorry, that time slot was just booked. Please pick another.'
+          : e.message;
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Reschedule failed: $e')));
+      }
+    }
+  }
+
   /// Guests can browse availability, but booking needs an account.
   /// Returns true (and routes to sign-in) when the user must log in first.
   bool _requireSignIn() {
@@ -96,15 +140,44 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
     final covering =
         periods == null ? null : findCoveringPeriod(periods, _selectedDay);
     final effectiveRate = covering?.hourlyRate ?? resource?.hourlyRate;
-    final customEnabled =
-        (resource?.customSelectorEnabled ?? false) && effectiveRate != null;
+    final isReschedule = widget.rescheduleBookingId != null;
+    final customEnabled = !isReschedule &&
+        (resource?.customSelectorEnabled ?? false) &&
+        effectiveRate != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Time'),
+        title: Text(isReschedule ? 'Reschedule Booking' : 'Select Time'),
       ),
       body: Column(
         children: [
+          if (isReschedule)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.swap_horiz,
+                    size: 18,
+                    color: AppTheme.primaryBlue,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Moving ${widget.rescheduleLabel ?? 'your booking'} — '
+                      'pick a new slot below.',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // ─── Calendar ───
           Card(
             margin: const EdgeInsets.all(12),
@@ -260,12 +333,15 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
                   data: (allDurs) {
                     final cc = ref.watch(currencyCodeProvider);
                     final minMinutes = resource?.minBookingMinutes ?? 0;
-                    // Only this season's tiers, at or above the minimum.
+                    // Only this season's tiers, at or above the minimum —
+                    // and locked to the original length when rescheduling.
                     final durs = allDurs
                         .where(
                           (d) =>
                               d.minutes >= minMinutes &&
-                              d.periodId == covering.id,
+                              d.periodId == covering.id &&
+                              (!isReschedule ||
+                                  d.minutes == widget.rescheduleMinutes),
                         )
                         .toList();
                     if (durs.isNotEmpty &&
@@ -347,6 +423,10 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
                         resource: resource,
                         duration: _selectedDuration,
                         onTapSlot: (start, end) {
+                          if (isReschedule) {
+                            _reschedule(start, end);
+                            return;
+                          }
                           if (_requireSignIn()) return;
                           context.push(
                             '/checkout',

@@ -6,6 +6,7 @@ class ConfirmationScreen extends StatelessWidget {
   const ConfirmationScreen({
     required this.bookingId,
     this.pendingApproval = false,
+    this.recurringCount = 1,
     super.key,
   });
   final String bookingId;
@@ -14,11 +15,15 @@ class ConfirmationScreen extends StatelessWidget {
   /// the customer pays.
   final bool pendingApproval;
 
+  /// Number of bookings created (> 1 for a weekly series).
+  final int recurringCount;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent =
         pendingApproval ? AppTheme.warningOrange : AppTheme.successGreen;
+    final isSeries = recurringCount > 1;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -41,7 +46,11 @@ class ConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               Text(
-                pendingApproval ? 'Request Sent!' : 'Booking Confirmed!',
+                pendingApproval
+                    ? 'Request Sent!'
+                    : isSeries
+                        ? 'Series Booked!'
+                        : 'Booking Confirmed!',
                 style: theme.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -51,8 +60,12 @@ class ConfirmationScreen extends StatelessWidget {
                 pendingApproval
                     ? 'The venue is reviewing your custom booking.\n'
                         "You'll be notified — and pay — once it's approved."
-                    : 'Your space has been reserved successfully.\n'
-                        "You'll receive a confirmation shortly.",
+                    : isSeries
+                        ? '$recurringCount weekly bookings have been '
+                            'reserved.\nEach week is priced by its season — '
+                            'see My Bookings.'
+                        : 'Your space has been reserved successfully.\n'
+                            "You'll receive a confirmation shortly.",
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: Colors.grey[600],

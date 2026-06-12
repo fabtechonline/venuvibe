@@ -119,8 +119,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/resource/:id/availability',
-        builder: (context, state) =>
-            AvailabilityCalendar(resourceId: state.pathParameters['id']!),
+        builder: (context, state) {
+          // Optional reschedule mode (pushed from My Bookings with extra).
+          final extra = state.extra is Map<String, dynamic>
+              ? state.extra! as Map<String, dynamic>
+              : const <String, dynamic>{};
+          return AvailabilityCalendar(
+            resourceId: state.pathParameters['id']!,
+            rescheduleBookingId: extra['rescheduleBookingId'] as String?,
+            rescheduleMinutes: extra['rescheduleMinutes'] as int?,
+            rescheduleLabel: extra['rescheduleLabel'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: '/checkout',
@@ -147,6 +157,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             return ConfirmationScreen(
               bookingId: extra['bookingId'] as String,
               pendingApproval: extra['pendingApproval'] as bool? ?? false,
+              recurringCount: extra['recurringCount'] as int? ?? 1,
             );
           }
           return ConfirmationScreen(bookingId: extra! as String);

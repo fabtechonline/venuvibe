@@ -12,7 +12,16 @@ final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
 final userBookingsProvider = FutureProvider<List<Booking>>((ref) async {
   final userId = SupabaseConfig.client.auth.currentUser?.id;
   if (userId == null) return [];
-  return ref.read(bookingRepositoryProvider).getUserBookings(userId);
+  final repo = ref.read(bookingRepositoryProvider);
+  // Flip any stale approval-pipeline holds before reading, so the list never
+  // shows a payable booking whose deadline has passed (the DB cron does the
+  // same sweep every 10 minutes).
+  try {
+    await repo.expireStaleBookings();
+  } catch (_) {
+    // Non-fatal: the cron sweep and the pay-time guard still cover expiry.
+  }
+  return repo.getUserBookings(userId);
 });
 
 final totalBookingsProvider = FutureProvider<int>((ref) async {
@@ -199,6 +208,62 @@ class BookingRepository {
       params: {'p_booking_id': bookingId},
     );
     return Booking.fromJson(data);
+  }
+
+  /// Releases expired approval-pipeline holds (idempotent definer RPC).
+  Future<void> expireStaleBookings() async {
+    await _client.rpc<dynamic>('expire_stale_bookings');
+  }
+
+  /// Moves a confirmed slot booking to a new time of the same length.
+  /// The server reprices from the new date's pricing season and the
+  /// no-overlap constraint rejects taken slots (23P01).
+  Future<Booking> rescheduleBooking(
+    String bookingId,
+    DateTime newStart,
+    DateTime newEnd,
+  ) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'reschedule_booking',
+      params: {
+        'p_booking_id': bookingId,
+        'p_new_start': newStart.toUtc().toIso8601String(),
+        'p_new_end': newEnd.toUtc().toIso8601String(),
+      },
+    );
+    return Booking.fromJson(data);
+  }
+
+  /// Books the same slot weekly for [weeks] occurrences (2–12), each priced
+  /// by its date's season. All-or-nothing: any conflicting or unpriced date
+  /// aborts the whole series with the dates listed in the error.
+  Future<List<Booking>> createRecurringBookings({
+    required String resourceId,
+    required DateTime startTime,
+    required DateTime endTime,
+    required String durationId,
+    required int weeks,
+    bool splitPayment = false,
+    Map<String, int> addonQuantities = const {},
+  }) async {
+    final data = await _client.rpc<List<dynamic>>(
+      'create_recurring_bookings',
+      params: {
+        'p_resource_id': resourceId,
+        'p_start': startTime.toUtc().toIso8601String(),
+        'p_end': endTime.toUtc().toIso8601String(),
+        'p_duration_id': durationId,
+        'p_weeks': weeks,
+        'p_split_payment': splitPayment,
+        'p_addons': [
+          for (final e in addonQuantities.entries)
+            if (e.value > 0) {'addon_id': e.key, 'qty': e.value},
+        ],
+      },
+    );
+    return data
+        .map((e) => Booking.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> cancelBooking(String bookingId, {String? reason}) async {

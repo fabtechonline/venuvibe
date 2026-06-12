@@ -36,6 +36,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _splitPayment = false;
   bool _isLoading = false;
+  int _repeatWeeks = 1;
   final Map<String, int> _addonQty = {};
 
   double _addonsTotal(List<ResourceAddon> addons) {
@@ -52,23 +53,39 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     try {
       // Prices are recomputed server-side inside the RPC; what we show here
       // is a preview using the same formulas.
-      final created =
-          await ref.read(bookingRepositoryProvider).createBookingWithAddons(
-                resourceId: widget.resourceId,
-                startTime: widget.startTime,
-                endTime: widget.endTime,
-                isCustom: widget.isCustom,
-                durationId: widget.durationId,
-                splitPayment: _splitPayment,
-                addonQuantities: _addonQty,
-              );
+      final repo = ref.read(bookingRepositoryProvider);
+      final String firstId;
+      if (!widget.isCustom && _repeatWeeks > 1) {
+        final created = await repo.createRecurringBookings(
+          resourceId: widget.resourceId,
+          startTime: widget.startTime,
+          endTime: widget.endTime,
+          durationId: widget.durationId!,
+          weeks: _repeatWeeks,
+          splitPayment: _splitPayment,
+          addonQuantities: _addonQty,
+        );
+        firstId = created.first.id;
+      } else {
+        final created = await repo.createBookingWithAddons(
+          resourceId: widget.resourceId,
+          startTime: widget.startTime,
+          endTime: widget.endTime,
+          isCustom: widget.isCustom,
+          durationId: widget.durationId,
+          splitPayment: _splitPayment,
+          addonQuantities: _addonQty,
+        );
+        firstId = created.id;
+      }
       ref.invalidate(userBookingsProvider);
       if (mounted) {
         context.go(
           '/confirmation',
           extra: {
-            'bookingId': created.id,
+            'bookingId': firstId,
             'pendingApproval': widget.isCustom,
+            'recurringCount': widget.isCustom ? 1 : _repeatWeeks,
           },
         );
       }
@@ -76,9 +93,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // 23P01 = exclusion_violation from the bookings_no_overlap constraint
       // (migration 0001): someone grabbed this slot first. The "No pricing"
       // rejection (migration 0016) is already customer-facing as-is.
+      // Series preflight errors already read well ("Cannot book the full
+      // series — 19 Jun 2026: time unavailable; …").
       final message = e.code == '23P01'
           ? 'Sorry, that time slot was just booked. Please pick another.'
-          : e.message.contains('No pricing')
+          : e.message.contains('No pricing') ||
+                  e.message.contains('Cannot book the full series')
               ? e.message
               : 'Booking failed: ${e.message}';
       if (mounted) {
@@ -239,6 +259,58 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(height: 16),
             ],
 
+            // ─── Repeat weekly (slot bookings only) ───
+            if (!widget.isCustom) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.repeat, size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('Repeat weekly')),
+                        DropdownButton<int>(
+                          value: _repeatWeeks,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            const DropdownMenuItem(
+                              value: 1,
+                              child: Text('Book once'),
+                            ),
+                            for (var w = 2; w <= 12; w++)
+                              DropdownMenuItem(
+                                value: w,
+                                child: Text('$w weeks'),
+                              ),
+                          ],
+                          onChanged: (v) =>
+                              setState(() => _repeatWeeks = v ?? 1),
+                        ),
+                      ],
+                    ),
+                    if (_repeatWeeks > 1)
+                      Text(
+                        'Same slot every week, starting '
+                        '${DateFormat('EEE, MMM d').format(widget.startTime)}. '
+                        'If any week is unavailable, nothing is booked.',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // ─── Split Payment Toggle ───
             Container(
               padding: const EdgeInsets.all(16),
@@ -289,10 +361,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const Divider(height: 20),
                       _PriceRow(
-                        label: 'Total',
+                        label: _repeatWeeks > 1 ? 'Total per week' : 'Total',
                         amount: total,
                         isBold: true,
                       ),
+                      if (_repeatWeeks > 1) ...[
+                        const SizedBox(height: 8),
+                        _PriceRow(
+                          label: 'Series estimate (× $_repeatWeeks weeks)',
+                          amount: total * _repeatWeeks,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Each week is priced by its season — the charged '
+                          'total may differ.',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[600]),
+                        ),
+                      ],
                       if (_splitPayment) ...[
                         const SizedBox(height: 8),
                         Text(
@@ -338,7 +424,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                     )
                   : Text(
-                      widget.isCustom ? 'Request Booking' : 'Confirm & Pay',
+                      widget.isCustom
+                          ? 'Request Booking'
+                          : _repeatWeeks > 1
+                              ? 'Book $_repeatWeeks weeks'
+                              : 'Confirm & Pay',
                     ),
             ),
           ),

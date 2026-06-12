@@ -73,6 +73,63 @@ void main() {
       expect(withStatus('confirmed').isAwaitingApproval, isFalse);
     });
 
+    test('expiry and recurring fields parse with safe defaults', () {
+      final json = <String, dynamic>{
+        'id': 'b1',
+        'user_id': 'u1',
+        'start_time': '2026-06-11T15:30:00Z',
+        'end_time': '2026-06-11T17:00:00Z',
+        'total_price': 38.5,
+        'created_at': '2026-06-11T10:00:00Z',
+      };
+      final plain = Booking.fromJson(json);
+      expect(plain.paymentDueAt, isNull);
+      expect(plain.isRecurring, isFalse);
+
+      final rich = Booking.fromJson({
+        ...json,
+        'payment_due_at': '2026-06-12T10:00:00Z',
+        'recurring_group_id': 'g1',
+      });
+      expect(rich.paymentDueAt!.toUtc(), DateTime.utc(2026, 6, 12, 10));
+      expect(rich.isRecurring, isTrue);
+    });
+
+    test('only future confirmed slot bookings are reschedulable', () {
+      Booking slot(String status, {String? durationId, DateTime? start}) =>
+          Booking(
+            id: 'b1',
+            userId: 'u1',
+            durationId: durationId,
+            startTime: start ?? DateTime.now().add(const Duration(days: 2)),
+            endTime: (start ?? DateTime.now().add(const Duration(days: 2)))
+                .add(const Duration(hours: 1)),
+            totalPrice: 100,
+            createdAt: DateTime.now(),
+            status: status,
+          );
+
+      expect(
+        slot('confirmed', durationId: 'd1').isReschedulableWithin(24),
+        isTrue,
+      );
+      // Custom bookings (no duration tier) need re-approval, not a move.
+      expect(slot('confirmed').isReschedulableWithin(24), isFalse);
+      expect(
+        slot('approved', durationId: 'd1').isReschedulableWithin(24),
+        isFalse,
+      );
+      // Inside the window the move is locked, like cancellation.
+      expect(
+        slot(
+          'confirmed',
+          durationId: 'd1',
+          start: DateTime.now().add(const Duration(hours: 1)),
+        ).isReschedulableWithin(24),
+        isFalse,
+      );
+    });
+
     test('unpaid pipeline bookings can always be cancelled', () {
       // Even inside the free-cancellation window cut-off.
       final soon = DateTime.now().add(const Duration(hours: 1));
