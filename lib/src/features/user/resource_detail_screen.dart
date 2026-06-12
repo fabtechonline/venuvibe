@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:venue_vibe/src/core/supabase_config.dart';
 import 'package:venue_vibe/src/repositories/favorite_repository.dart';
 import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/repositories/review_repository.dart';
@@ -12,6 +13,17 @@ import 'package:venue_vibe/src/widgets/star_rating.dart';
 class ResourceDetailScreen extends ConsumerWidget {
   const ResourceDetailScreen({required this.resourceId, super.key});
   final String resourceId;
+
+  /// Guests browse freely; favorites and reviews need an account.
+  /// Returns true (and routes to sign-in) when the user must log in first.
+  bool _requireSignIn(BuildContext context) {
+    if (SupabaseConfig.client.auth.currentUser != null) return false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sign in to use this.')),
+    );
+    context.go('/login?from=${Uri.encodeComponent('/resource/$resourceId')}');
+    return true;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +66,7 @@ class ResourceDetailScreen extends ConsumerWidget {
                       color: isFav ? AppTheme.errorRed : Colors.white,
                     ),
                     onPressed: () async {
+                      if (_requireSignIn(context)) return;
                       await ref
                           .read(favoriteRepositoryProvider)
                           .toggleFavorite(resourceId, makeFavorite: !isFav);
@@ -300,11 +313,14 @@ class ResourceDetailScreen extends ConsumerWidget {
                           Text('Reviews', style: theme.textTheme.titleLarge),
                           const Spacer(),
                           TextButton.icon(
-                            onPressed: () => showDialog<void>(
-                              context: context,
-                              builder: (_) =>
-                                  _WriteReviewDialog(resourceId: resourceId),
-                            ),
+                            onPressed: () {
+                              if (_requireSignIn(context)) return;
+                              showDialog<void>(
+                                context: context,
+                                builder: (_) =>
+                                    _WriteReviewDialog(resourceId: resourceId),
+                              );
+                            },
                             icon: const Icon(
                               Icons.rate_review_outlined,
                               size: 18,

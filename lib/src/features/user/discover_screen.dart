@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
 import 'package:venue_vibe/src/models/resource.dart';
 import 'package:venue_vibe/src/repositories/favorite_repository.dart';
 import 'package:venue_vibe/src/repositories/notification_repository.dart';
@@ -298,6 +299,11 @@ class _ResourceCard extends ConsumerWidget {
                         color: AppTheme.errorRed,
                       ),
                       onPressed: () async {
+                        // Favorites need an account; guests go to sign-in.
+                        if (SupabaseConfig.client.auth.currentUser == null) {
+                          context.go('/login');
+                          return;
+                        }
                         await ref
                             .read(favoriteRepositoryProvider)
                             .toggleFavorite(

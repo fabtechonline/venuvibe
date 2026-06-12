@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:venue_vibe/src/core/supabase_config.dart';
 import 'package:venue_vibe/src/models/busy_slot.dart';
 import 'package:venue_vibe/src/models/duration_model.dart';
 import 'package:venue_vibe/src/models/resource.dart';
@@ -58,6 +59,19 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  /// Guests can browse availability, but booking needs an account.
+  /// Returns true (and routes to sign-in) when the user must log in first.
+  bool _requireSignIn() {
+    if (SupabaseConfig.client.auth.currentUser != null) return false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sign in to book this venue.')),
+    );
+    final here =
+        Uri.encodeComponent('/resource/${widget.resourceId}/availability');
+    context.go('/login?from=$here');
+    return true;
   }
 
   @override
@@ -170,18 +184,22 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
                   );
                   if (t != null) setState(() => _customEnd = t);
                 },
-                onRequest: (start, end, price) => context.push(
-                  '/checkout',
-                  extra: {
-                    'resourceId': widget.resourceId,
-                    'startTime': start,
-                    'endTime': end,
-                    'durationLabel': 'Custom '
-                        '(${(end.difference(start).inMinutes / 60).toStringAsFixed(1)}h)',
-                    'price': price,
-                    'isCustom': true,
-                  },
-                ),
+                onRequest: (start, end, price) {
+                  if (_requireSignIn()) return;
+                  final hours =
+                      (end.difference(start).inMinutes / 60).toStringAsFixed(1);
+                  context.push(
+                    '/checkout',
+                    extra: {
+                      'resourceId': widget.resourceId,
+                      'startTime': start,
+                      'endTime': end,
+                      'durationLabel': 'Custom (${hours}h)',
+                      'price': price,
+                      'isCustom': true,
+                    },
+                  );
+                },
               ),
             )
           else ...[
@@ -266,17 +284,20 @@ class _AvailabilityCalendarState extends ConsumerState<AvailabilityCalendar> {
                       day: _selectedDay,
                       resource: resource,
                       duration: _selectedDuration,
-                      onTapSlot: (start, end) => context.push(
-                        '/checkout',
-                        extra: {
-                          'resourceId': widget.resourceId,
-                          'startTime': start,
-                          'endTime': end,
-                          'durationLabel': _selectedDuration!.label,
-                          'price': _selectedDuration!.price,
-                          'durationId': _selectedDuration!.id,
-                        },
-                      ),
+                      onTapSlot: (start, end) {
+                        if (_requireSignIn()) return;
+                        context.push(
+                          '/checkout',
+                          extra: {
+                            'resourceId': widget.resourceId,
+                            'startTime': start,
+                            'endTime': end,
+                            'durationLabel': _selectedDuration!.label,
+                            'price': _selectedDuration!.price,
+                            'durationId': _selectedDuration!.id,
+                          },
+                        );
+                      },
                     ),
             ),
           ],

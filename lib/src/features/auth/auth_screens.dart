@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:venue_vibe/src/repositories/auth_repository.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -160,6 +161,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     child: const Text("Don't have an account? Sign Up"),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.explore_outlined, size: 18),
+                    label: const Text('Continue browsing as guest'),
                   ),
                 ],
               ),

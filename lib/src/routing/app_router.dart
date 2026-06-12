@@ -47,8 +47,35 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       final isAuthRoute = loc == '/login';
 
-      if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/';
+      // Guests can browse: Discover ('/'), search, resource details and
+      // availability. Sign-in is only required for booking and anything
+      // personal. (Sessions persist via Supabase local storage, so signed-in
+      // users stay signed in across app restarts.)
+      const protectedPrefixes = [
+        '/bookings',
+        '/profile',
+        '/notifications',
+        '/checkout',
+        '/confirmation',
+        '/tenant',
+        '/admin',
+      ];
+      final needsAuth = protectedPrefixes.any(loc.startsWith);
+
+      if (!isLoggedIn && needsAuth) {
+        // Return the user to where they were headed after signing in —
+        // except /checkout and /confirmation, whose state.extra can't
+        // survive the round-trip.
+        final canReturn =
+            !loc.startsWith('/checkout') && !loc.startsWith('/confirmation');
+        return canReturn
+            ? '/login?from=${Uri.encodeComponent(state.uri.toString())}'
+            : '/login';
+      }
+      if (isLoggedIn && isAuthRoute) {
+        final from = state.uri.queryParameters['from'];
+        return (from == null || from.isEmpty) ? '/' : from;
+      }
 
       // ─── Role guards ───
       // Only enforce once the profile (role) has loaded; while it's still
