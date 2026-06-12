@@ -34,8 +34,7 @@ class ResourceDetailScreen extends ConsumerWidget {
 
         final resource = snapshot.data!;
         final durations = ref.watch(resourceDurationsProvider(resourceId));
-        final favIds =
-            ref.watch(favoriteIdsProvider).valueOrNull ?? <String>{};
+        final favIds = ref.watch(favoriteIdsProvider).valueOrNull ?? <String>{};
         final isFav = favIds.contains(resourceId);
         final rating =
             ref.watch(ratingsSummaryProvider).valueOrNull?[resourceId];
@@ -291,8 +290,7 @@ class ResourceDetailScreen extends ConsumerWidget {
                                           Expanded(
                                             child: Text(
                                               r.userName ?? 'Guest',
-                                              style:
-                                                  theme.textTheme.titleSmall,
+                                              style: theme.textTheme.titleSmall,
                                             ),
                                           ),
                                           StarRating(

@@ -2,7 +2,11 @@ class Booking {
   const Booking({
     required this.id,
     required this.userId,
-    required this.startTime, required this.endTime, required this.totalPrice, required this.createdAt, this.resourceId,
+    required this.startTime,
+    required this.endTime,
+    required this.totalPrice,
+    required this.createdAt,
+    this.resourceId,
     this.durationId,
     this.commissionAmount,
     this.status = 'confirmed',
@@ -10,6 +14,9 @@ class Booking {
     this.cancellationReason,
     this.splitPayment = false,
     this.splitLink,
+    this.basePrice,
+    this.addonsTotal = 0,
+    this.discountAmount = 0,
     this.resourceName,
     this.tenantName,
     this.userName,
@@ -32,6 +39,9 @@ class Booking {
       cancellationReason: json['cancellation_reason'] as String?,
       splitPayment: json['split_payment'] as bool? ?? false,
       splitLink: json['split_link'] as String?,
+      basePrice: (json['base_price'] as num?)?.toDouble(),
+      addonsTotal: (json['addons_total'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
       resourceName: json['resources'] != null
           ? (json['resources'] as Map<String, dynamic>)['name'] as String?
@@ -58,6 +68,9 @@ class Booking {
   final String? cancellationReason;
   final bool splitPayment;
   final String? splitLink;
+  final double? basePrice;
+  final double addonsTotal;
+  final double discountAmount;
   final DateTime createdAt;
 
   // Joined fields
@@ -78,11 +91,23 @@ class Booking {
         'split_payment': splitPayment,
       };
 
+  /// Statuses that hold the slot and count as a live booking for the user.
+  static const activeStatuses = {'confirmed', 'pending_approval', 'approved'};
+
   bool get isCancellable =>
-      status == 'confirmed' && startTime.isAfter(DateTime.now());
+      activeStatuses.contains(status) && startTime.isAfter(DateTime.now());
   bool get isUpcoming =>
-      status == 'confirmed' && startTime.isAfter(DateTime.now());
+      activeStatuses.contains(status) && startTime.isAfter(DateTime.now());
   bool get isPast => endTime.isBefore(DateTime.now());
+
+  /// Custom request waiting on the venue owner's decision.
+  bool get isAwaitingApproval => status == 'pending_approval';
+
+  /// Approved by the venue; customer still needs to pay to confirm.
+  bool get isAwaitingPayment => status == 'approved';
+
+  /// Custom request declined by the venue.
+  bool get isRejected => status == 'rejected';
 
   /// The moment after which free cancellation is no longer allowed
   /// (i.e. [windowHours] before the booking starts).
@@ -91,7 +116,10 @@ class Booking {
 
   /// Whether the booking can still be cancelled for free, honouring the
   /// platform's free-cancellation window (hours before start time).
+  /// Unpaid approval-pipeline bookings can always be cancelled.
   bool isCancellableWithin(int windowHours) =>
-      status == 'confirmed' &&
-      DateTime.now().isBefore(cancellationDeadline(windowHours));
+      isAwaitingApproval ||
+      isAwaitingPayment ||
+      (status == 'confirmed' &&
+          DateTime.now().isBefore(cancellationDeadline(windowHours)));
 }

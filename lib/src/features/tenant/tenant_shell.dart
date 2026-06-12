@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:venue_vibe/src/features/tenant/tenant_onboarding_screen.dart';
+import 'package:venue_vibe/src/repositories/booking_repository.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
 class TenantShell extends ConsumerWidget {
@@ -19,6 +20,8 @@ class TenantShell extends ConsumerWidget {
       data: (tenant) {
         if (tenant == null) return const TenantOnboarding();
         final location = GoRouterState.of(context).matchedLocation;
+        final pendingCount =
+            ref.watch(tenantPendingApprovalsProvider).valueOrNull?.length ?? 0;
         return Scaffold(
           body: child,
           bottomNavigationBar: NavigationBar(
@@ -37,28 +40,36 @@ class TenantShell extends ConsumerWidget {
                   context.go('/');
               }
             },
-            destinations: const [
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
+                icon: Badge(
+                  isLabelVisible: pendingCount > 0,
+                  label: Text('$pendingCount'),
+                  child: const Icon(Icons.dashboard_outlined),
+                ),
+                selectedIcon: Badge(
+                  isLabelVisible: pendingCount > 0,
+                  label: Text('$pendingCount'),
+                  child: const Icon(Icons.dashboard),
+                ),
                 label: 'Dashboard',
               ),
-              NavigationDestination(
+              const NavigationDestination(
                 icon: Icon(Icons.meeting_room_outlined),
                 selectedIcon: Icon(Icons.meeting_room),
                 label: 'Resources',
               ),
-              NavigationDestination(
+              const NavigationDestination(
                 icon: Icon(Icons.calendar_month_outlined),
                 selectedIcon: Icon(Icons.calendar_month),
                 label: 'Scheduler',
               ),
-              NavigationDestination(
+              const NavigationDestination(
                 icon: Icon(Icons.tune_outlined),
                 selectedIcon: Icon(Icons.tune),
                 label: 'Rules',
               ),
-              NavigationDestination(
+              const NavigationDestination(
                 icon: Icon(Icons.storefront_outlined),
                 selectedIcon: Icon(Icons.storefront),
                 label: 'Customer',

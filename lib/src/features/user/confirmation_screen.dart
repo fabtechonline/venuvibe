@@ -3,12 +3,22 @@ import 'package:go_router/go_router.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class ConfirmationScreen extends StatelessWidget {
-  const ConfirmationScreen({required this.bookingId, super.key});
+  const ConfirmationScreen({
+    required this.bookingId,
+    this.pendingApproval = false,
+    super.key,
+  });
   final String bookingId;
+
+  /// True for custom time requests: the venue still has to approve before
+  /// the customer pays.
+  final bool pendingApproval;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent =
+        pendingApproval ? AppTheme.warningOrange : AppTheme.successGreen;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -20,25 +30,29 @@ class ConfirmationScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppTheme.successGreen.withValues(alpha: 0.12),
+                  color: accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check_circle,
+                child: Icon(
+                  pendingApproval ? Icons.hourglass_top : Icons.check_circle,
                   size: 64,
-                  color: AppTheme.successGreen,
+                  color: accent,
                 ),
               ),
               const SizedBox(height: 32),
               Text(
-                'Booking Confirmed!',
+                pendingApproval ? 'Request Sent!' : 'Booking Confirmed!',
                 style: theme.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                "Your space has been reserved successfully.\nYou'll receive a confirmation shortly.",
+                pendingApproval
+                    ? 'The venue is reviewing your custom booking.\n'
+                        "You'll be notified — and pay — once it's approved."
+                    : 'Your space has been reserved successfully.\n'
+                        "You'll receive a confirmation shortly.",
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: Colors.grey[600],

@@ -5,7 +5,8 @@ class DurationModel {
     required this.label,
     required this.minutes,
     required this.price,
-    required this.createdAt, this.isActive = true,
+    required this.createdAt,
+    this.isActive = true,
   });
 
   factory DurationModel.fromJson(Map<String, dynamic> json) {
@@ -34,4 +35,15 @@ class DurationModel {
         'price': price,
         'is_active': isActive,
       };
+
+  DurationModel copyWith({String? label, int? minutes, double? price}) =>
+      DurationModel(
+        id: id,
+        resourceId: resourceId,
+        label: label ?? this.label,
+        minutes: minutes ?? this.minutes,
+        price: price ?? this.price,
+        isActive: isActive,
+        createdAt: createdAt,
+      );
 }

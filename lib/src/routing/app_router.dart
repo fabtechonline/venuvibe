@@ -9,6 +9,7 @@ import 'package:venue_vibe/src/features/admin/invoices_screen.dart';
 import 'package:venue_vibe/src/features/admin/plans_screen.dart';
 import 'package:venue_vibe/src/features/admin/tenant_manager.dart';
 import 'package:venue_vibe/src/features/auth/auth_screens.dart';
+import 'package:venue_vibe/src/features/tenant/approvals_screen.dart';
 import 'package:venue_vibe/src/features/tenant/resource_editor_screen.dart';
 import 'package:venue_vibe/src/features/tenant/resource_list_screen.dart';
 import 'package:venue_vibe/src/features/tenant/rules_screen.dart';
@@ -103,14 +104,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             endTime: extra['endTime'] as DateTime,
             durationLabel: extra['durationLabel'] as String,
             price: extra['price'] as double,
+            durationId: extra['durationId'] as String?,
+            isCustom: extra['isCustom'] as bool? ?? false,
           );
         },
       ),
       GoRoute(
         path: '/confirmation',
         builder: (context, state) {
-          final bookingId = state.extra! as String;
-          return ConfirmationScreen(bookingId: bookingId);
+          // Plain String = confirmed booking id (backward compatible);
+          // map adds the awaiting-approval variant for custom requests.
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return ConfirmationScreen(
+              bookingId: extra['bookingId'] as String,
+              pendingApproval: extra['pendingApproval'] as bool? ?? false,
+            );
+          }
+          return ConfirmationScreen(bookingId: extra! as String);
         },
       ),
       GoRoute(
@@ -143,6 +154,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/tenant/approvals',
+        builder: (context, state) => const ApprovalsScreen(),
       ),
       GoRoute(
         path: '/tenant/resources/edit',

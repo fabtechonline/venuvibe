@@ -44,7 +44,13 @@ class MyBookingsScreen extends ConsumerWidget {
 
           final upcoming = bookings.where((b) => b.isUpcoming).toList();
           final past = bookings
-              .where((b) => b.isPast || b.status == 'cancelled')
+              .where(
+                (b) =>
+                    !b.isUpcoming &&
+                    (b.isPast ||
+                        b.status == 'cancelled' ||
+                        b.status == 'rejected'),
+              )
               .toList();
 
           return DefaultTabController(
@@ -106,15 +112,29 @@ class _BookingList extends ConsumerWidget {
       itemBuilder: (context, index) {
         final b = bookings[index];
         Color statusColor;
+        String statusLabel;
         switch (b.status) {
           case 'confirmed':
             statusColor = AppTheme.successGreen;
+            statusLabel = 'CONFIRMED';
           case 'cancelled':
             statusColor = AppTheme.errorRed;
+            statusLabel = 'CANCELLED';
+          case 'rejected':
+            statusColor = AppTheme.errorRed;
+            statusLabel = 'DECLINED';
           case 'completed':
             statusColor = AppTheme.primaryBlue;
+            statusLabel = 'COMPLETED';
+          case 'pending_approval':
+            statusColor = AppTheme.warningOrange;
+            statusLabel = 'AWAITING APPROVAL';
+          case 'approved':
+            statusColor = AppTheme.primaryBlue;
+            statusLabel = 'APPROVED · PAY NOW';
           default:
             statusColor = AppTheme.warningOrange;
+            statusLabel = b.status.toUpperCase();
         }
 
         return Card(
@@ -141,7 +161,7 @@ class _BookingList extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        b.status.toUpperCase(),
+                        statusLabel,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 11,
@@ -173,6 +193,23 @@ class _BookingList extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (b.discountAmount > 0) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Venue discount −'
+                    '${formatPrice(b.discountAmount, ref.watch(currencyCodeProvider))}',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppTheme.successGreen),
+                  ),
+                ],
+                if (b.isRejected && b.cancellationReason != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Reason: ${b.cancellationReason}',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppTheme.errorRed),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -187,6 +224,27 @@ class _BookingList extends ConsumerWidget {
                       ),
                     ),
                     const Spacer(),
+                    if (b.isAwaitingPayment) ...[
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            await ref
+                                .read(bookingRepositoryProvider)
+                                .payBookingPlaceholder(b.id);
+                            ref.invalidate(userBookingsProvider);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Payment failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.payment, size: 18),
+                        label: const Text('Pay now'),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     if (showCancel && b.isCancellableWithin(windowHours))
                       TextButton(
                         onPressed: () async {

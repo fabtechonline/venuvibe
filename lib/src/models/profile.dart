@@ -2,7 +2,8 @@ class Profile {
   const Profile({
     required this.id,
     required this.role,
-    required this.createdAt, this.fullName,
+    required this.createdAt,
+    this.fullName,
     this.phone,
     this.email,
     this.avatarUrl,

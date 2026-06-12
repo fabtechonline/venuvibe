@@ -2,7 +2,9 @@ class Resource {
   const Resource({
     required this.id,
     required this.tenantId,
-    required this.name, required this.createdAt, this.categoryId,
+    required this.name,
+    required this.createdAt,
+    this.categoryId,
     this.description,
     this.capacity = 1,
     this.amenities = const [],
@@ -11,6 +13,10 @@ class Resource {
     this.isActive = true,
     this.openTime = '07:00',
     this.closeTime = '23:00',
+    this.minBookingMinutes = 30,
+    this.bufferMinutes = 0,
+    this.customSelectorEnabled = false,
+    this.hourlyRate,
     this.tenantName,
     this.categoryName,
   });
@@ -36,6 +42,10 @@ class Resource {
       createdAt: DateTime.parse(json['created_at'] as String),
       openTime: _normalizeTime(json['open_time'] as String?, '07:00'),
       closeTime: _normalizeTime(json['close_time'] as String?, '23:00'),
+      minBookingMinutes: json['min_booking_minutes'] as int? ?? 30,
+      bufferMinutes: json['buffer_minutes'] as int? ?? 0,
+      customSelectorEnabled: json['custom_selector_enabled'] as bool? ?? false,
+      hourlyRate: (json['hourly_rate'] as num?)?.toDouble(),
       tenantName: json['tenants'] != null
           ? (json['tenants'] as Map<String, dynamic>)['name'] as String?
           : null,
@@ -56,6 +66,10 @@ class Resource {
   final bool isActive;
   final String openTime; // local wall-clock 'HH:MM'
   final String closeTime; // local wall-clock 'HH:MM'
+  final int minBookingMinutes;
+  final int bufferMinutes;
+  final bool customSelectorEnabled;
+  final double? hourlyRate;
   final DateTime createdAt;
 
   // Joined fields
@@ -79,6 +93,10 @@ class Resource {
         'is_active': isActive,
         'open_time': openTime,
         'close_time': closeTime,
+        'min_booking_minutes': minBookingMinutes,
+        'buffer_minutes': bufferMinutes,
+        'custom_selector_enabled': customSelectorEnabled,
+        'hourly_rate': hourlyRate,
       };
 
   // Postgres `time` comes back as 'HH:MM:SS'; keep just 'HH:MM'.

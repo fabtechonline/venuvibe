@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/addon.dart';
 import 'package:venue_vibe/src/models/busy_slot.dart';
 import 'package:venue_vibe/src/models/category.dart';
 import 'package:venue_vibe/src/models/duration_model.dart';
 import 'package:venue_vibe/src/models/resource.dart';
+import 'package:venue_vibe/src/models/resource_hours.dart';
 import 'package:venue_vibe/src/models/slot_block.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
@@ -49,6 +51,18 @@ final tenantSlotBlocksProvider = FutureProvider<List<SlotBlock>>((ref) async {
   final tenant = await ref.watch(currentTenantProvider.future);
   if (tenant == null) return [];
   return ref.read(resourceRepositoryProvider).getTenantSlotBlocks(tenant.id);
+});
+
+/// Per-weekday trading hours for a resource (empty = legacy single window).
+final resourceHoursProvider =
+    FutureProvider.family<List<ResourceHours>, String>((ref, resourceId) async {
+  return ref.read(resourceRepositoryProvider).getResourceHours(resourceId);
+});
+
+/// Active add-ons a customer can attach to a booking of this resource.
+final resourceAddonsProvider =
+    FutureProvider.family<List<ResourceAddon>, String>((ref, resourceId) async {
+  return ref.read(resourceRepositoryProvider).getAddons(resourceId);
 });
 
 class ResourceRepository {
@@ -153,6 +167,91 @@ class ResourceRepository {
 
   Future<void> deleteDuration(String id) async {
     await _client.from('durations').delete().eq('id', id);
+  }
+
+  /// Partial update of the custom-booking settings only.
+  Future<void> setCustomBookingConfig(
+    String resourceId, {
+    required bool enabled,
+    double? hourlyRate,
+  }) async {
+    await _client.from('resources').update({
+      'custom_selector_enabled': enabled,
+      'hourly_rate': hourlyRate,
+    }).eq('id', resourceId);
+  }
+
+  Future<void> updateDuration(DurationModel duration) async {
+    await _client
+        .from('durations')
+        .update(duration.toJson())
+        .eq('id', duration.id);
+  }
+
+  // Per-weekday trading hours
+  Future<List<ResourceHours>> getResourceHours(String resourceId) async {
+    final data = await _client
+        .from('resource_hours')
+        .select()
+        .eq('resource_id', resourceId)
+        .order('weekday');
+    return data.map(ResourceHours.fromJson).toList();
+  }
+
+  /// Replaces the resource's weekly schedule (one row per weekday).
+  Future<void> upsertResourceHours(
+    String resourceId,
+    List<ResourceHours> hours,
+  ) async {
+    await _client.from('resource_hours').upsert(
+          hours.map((h) => h.toJson()).toList(),
+          onConflict: 'resource_id,weekday',
+        );
+  }
+
+  // Add-ons
+  Future<List<ResourceAddon>> getAddons(
+    String resourceId, {
+    bool activeOnly = true,
+  }) async {
+    var query =
+        _client.from('resource_addons').select().eq('resource_id', resourceId);
+    if (activeOnly) query = query.eq('is_active', true);
+    final data = await query.order('name');
+    return data.map(ResourceAddon.fromJson).toList();
+  }
+
+  Future<ResourceAddon> createAddon(ResourceAddon addon) async {
+    final data = await _client
+        .from('resource_addons')
+        .insert(addon.toJson())
+        .select()
+        .single();
+    return ResourceAddon.fromJson(data);
+  }
+
+  Future<void> updateAddon(ResourceAddon addon) async {
+    await _client
+        .from('resource_addons')
+        .update(addon.toJson())
+        .eq('id', addon.id);
+  }
+
+  /// Soft-deactivates when the add-on is referenced by past bookings
+  /// (booking_addons keeps snapshots either way); hard-deletes otherwise.
+  Future<void> deleteAddon(String id) async {
+    final used = await _client
+        .from('booking_addons')
+        .select('id')
+        .eq('addon_id', id)
+        .limit(1);
+    if (used.isEmpty) {
+      await _client.from('resource_addons').delete().eq('id', id);
+    } else {
+      await _client
+          .from('resource_addons')
+          .update({'is_active': false}).eq('id', id);
+    }
   }
 
   // Slot Blocks

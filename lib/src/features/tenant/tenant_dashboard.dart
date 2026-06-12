@@ -69,6 +69,41 @@ class TenantDashboard extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
+            // ─── Pending custom-booking approvals ───
+            Consumer(
+              builder: (context, ref, _) {
+                final pending =
+                    ref.watch(tenantPendingApprovalsProvider).valueOrNull ?? [];
+                if (pending.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Card(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.08),
+                    child: ListTile(
+                      leading: Badge(
+                        label: Text('${pending.length}'),
+                        child: const CircleAvatar(
+                          backgroundColor: AppTheme.warningOrange,
+                          child: Icon(
+                            Icons.fact_check_outlined,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      title: const Text('Booking requests'),
+                      subtitle: Text(
+                        '${pending.length} custom '
+                        'booking${pending.length == 1 ? '' : 's'} awaiting '
+                        'your approval',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/tenant/approvals'),
+                    ),
+                  ),
+                );
+              },
+            ),
+
             // ─── Quick Actions ───
             Text('Quick Actions', style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),

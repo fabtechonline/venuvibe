@@ -2,7 +2,8 @@ class Category {
   const Category({
     required this.id,
     required this.name,
-    required this.createdAt, this.icon,
+    required this.createdAt,
+    this.icon,
     this.description,
     this.isActive = true,
     this.sortOrder = 0,

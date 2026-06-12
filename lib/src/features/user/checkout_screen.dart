@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:venue_vibe/src/core/supabase_config.dart';
-import 'package:venue_vibe/src/models/booking.dart';
+import 'package:venue_vibe/src/models/addon.dart';
 import 'package:venue_vibe/src/repositories/booking_repository.dart';
+import 'package:venue_vibe/src/repositories/resource_repository.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
@@ -17,6 +17,8 @@ class CheckoutScreen extends ConsumerStatefulWidget {
     required this.endTime,
     required this.durationLabel,
     required this.price,
+    this.durationId,
+    this.isCustom = false,
     super.key,
   });
   final String resourceId;
@@ -24,6 +26,8 @@ class CheckoutScreen extends ConsumerStatefulWidget {
   final DateTime endTime;
   final String durationLabel;
   final double price;
+  final String? durationId;
+  final bool isCustom;
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -32,35 +36,41 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _splitPayment = false;
   bool _isLoading = false;
+  final Map<String, int> _addonQty = {};
+
+  double _addonsTotal(List<ResourceAddon> addons) {
+    var total = 0.0;
+    for (final a in addons) {
+      total += a.price * (_addonQty[a.id] ?? 0);
+    }
+    return total;
+  }
 
   Future<void> _confirmBooking() async {
     setState(() => _isLoading = true);
 
     try {
-      final userId = SupabaseConfig.client.auth.currentUser!.id;
-      final settings =
-          await ref.read(tenantRepositoryProvider).getPlatformSettings();
-      final commissionRate = settings?.commissionRate ?? 10.0;
-      final commission = widget.price * (commissionRate / 100);
-
-      final booking = Booking(
-        id: '',
-        userId: userId,
-        resourceId: widget.resourceId,
-        startTime: widget.startTime,
-        endTime: widget.endTime,
-        totalPrice: widget.price + commission,
-        commissionAmount: commission,
-        paymentStatus: 'paid',
-        splitPayment: _splitPayment,
-        createdAt: DateTime.now(),
-      );
-
+      // Prices are recomputed server-side inside the RPC; what we show here
+      // is a preview using the same formulas.
       final created =
-          await ref.read(bookingRepositoryProvider).createBooking(booking);
+          await ref.read(bookingRepositoryProvider).createBookingWithAddons(
+                resourceId: widget.resourceId,
+                startTime: widget.startTime,
+                endTime: widget.endTime,
+                isCustom: widget.isCustom,
+                durationId: widget.durationId,
+                splitPayment: _splitPayment,
+                addonQuantities: _addonQty,
+              );
       ref.invalidate(userBookingsProvider);
       if (mounted) {
-        context.go('/confirmation', extra: created.id);
+        context.go(
+          '/confirmation',
+          extra: {
+            'bookingId': created.id,
+            'pendingApproval': widget.isCustom,
+          },
+        );
       }
     } on PostgrestException catch (e) {
       // 23P01 = exclusion_violation from the bookings_no_overlap constraint
@@ -89,6 +99,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final dateFormat = DateFormat('EEE, MMM d, yyyy');
     final timeFormat = DateFormat.jm();
     final settingsAsync = ref.watch(platformSettingsProvider);
+    final addons =
+        ref.watch(resourceAddonsProvider(widget.resourceId)).valueOrNull ??
+            const <ResourceAddon>[];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
@@ -97,6 +110,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ─── Approval notice for custom requests ───
+            if (widget.isCustom) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningOrange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.hourglass_top,
+                      color: AppTheme.warningOrange,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This is a custom time request. The venue must '
+                        'approve it before you pay — we’ll notify you.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // ─── Booking Summary ───
             Container(
               padding: const EdgeInsets.all(20),
@@ -134,6 +178,63 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             const SizedBox(height: 16),
 
+            // ─── Add-ons ───
+            if (addons.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Add-ons', style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 4),
+                    for (final a in addons)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    a.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    formatPrice(
+                                      a.price,
+                                      ref.watch(currencyCodeProvider),
+                                    ),
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _QtyStepper(
+                              qty: _addonQty[a.id] ?? 0,
+                              maxQty: a.maxQty,
+                              onChanged: (q) =>
+                                  setState(() => _addonQty[a.id] = q),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // ─── Split Payment Toggle ───
             Container(
               padding: const EdgeInsets.all(16),
@@ -157,8 +258,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             settingsAsync.when(
               data: (settings) {
                 final rate = settings?.commissionRate ?? 10.0;
-                final commission = widget.price * (rate / 100);
-                final total = widget.price + commission;
+                final addonsTotal = _addonsTotal(addons);
+                final commission = (widget.price + addonsTotal) * (rate / 100);
+                final total = widget.price + addonsTotal + commission;
 
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -172,6 +274,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: Column(
                     children: [
                       _PriceRow(label: 'Base Price', amount: widget.price),
+                      if (addonsTotal > 0) ...[
+                        const SizedBox(height: 8),
+                        _PriceRow(label: 'Add-ons', amount: addonsTotal),
+                      ],
                       const SizedBox(height: 8),
                       _PriceRow(
                         label: 'Platform Fee (${rate.toStringAsFixed(0)}%)',
@@ -227,11 +333,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Confirm & Pay'),
+                  : Text(
+                      widget.isCustom ? 'Request Booking' : 'Confirm & Pay',
+                    ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _QtyStepper extends StatelessWidget {
+  const _QtyStepper({
+    required this.qty,
+    required this.maxQty,
+    required this.onChanged,
+  });
+  final int qty;
+  final int maxQty;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.remove_circle_outline),
+          onPressed: qty > 0 ? () => onChanged(qty - 1) : null,
+        ),
+        SizedBox(
+          width: 24,
+          child: Text(
+            '$qty',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.add_circle_outline),
+          color: AppTheme.primaryBlue,
+          onPressed: qty < maxQty ? () => onChanged(qty + 1) : null,
+        ),
+      ],
     );
   }
 }

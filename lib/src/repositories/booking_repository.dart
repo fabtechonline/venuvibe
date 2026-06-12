@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:venue_vibe/src/core/supabase_config.dart';
+import 'package:venue_vibe/src/models/addon.dart';
 import 'package:venue_vibe/src/models/booking.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
 
@@ -34,6 +35,19 @@ final tenantBookingsCountProvider = FutureProvider<int>((ref) async {
   return bookings
       .where((b) => b.status == 'confirmed' || b.status == 'completed')
       .length;
+});
+
+/// Custom booking requests awaiting this tenant's approval.
+final tenantPendingApprovalsProvider =
+    FutureProvider<List<Booking>>((ref) async {
+  final bookings = await ref.watch(tenantBookingsProvider.future);
+  return bookings.where((b) => b.isAwaitingApproval).toList();
+});
+
+/// Add-on line items of one booking (snapshots).
+final bookingAddonsProvider =
+    FutureProvider.family<List<BookingAddon>, String>((ref, bookingId) async {
+  return ref.read(bookingRepositoryProvider).getBookingAddons(bookingId);
 });
 
 /// This tenant's earnings = base price (total minus the platform commission),
@@ -72,7 +86,10 @@ class BookingRepository {
         .eq('resource_id', resourceId)
         .gte('end_time', start.toUtc().toIso8601String())
         .lte('start_time', end.toUtc().toIso8601String())
-        .inFilter('status', ['confirmed', 'pending']);
+        .inFilter(
+      'status',
+      ['confirmed', 'pending', 'pending_approval', 'approved'],
+    );
     return data.map(Booking.fromJson).toList();
   }
 
@@ -104,6 +121,83 @@ class BookingRepository {
         .insert(booking.toJson())
         .select()
         .single();
+    return Booking.fromJson(data);
+  }
+
+  /// Server-priced, atomic booking creation (booking + add-on lines).
+  /// Slot bookings confirm immediately (placeholder-pay world); custom
+  /// bookings land in 'pending_approval' for the venue owner to review.
+  Future<Booking> createBookingWithAddons({
+    required String resourceId,
+    required DateTime startTime,
+    required DateTime endTime,
+    required bool isCustom,
+    String? durationId,
+    bool splitPayment = false,
+    Map<String, int> addonQuantities = const {},
+  }) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'create_booking_with_addons',
+      params: {
+        'p_resource_id': resourceId,
+        'p_start': startTime.toUtc().toIso8601String(),
+        'p_end': endTime.toUtc().toIso8601String(),
+        'p_duration_id': durationId,
+        'p_is_custom': isCustom,
+        'p_split_payment': splitPayment,
+        'p_addons': [
+          for (final e in addonQuantities.entries)
+            if (e.value > 0) {'addon_id': e.key, 'qty': e.value},
+        ],
+      },
+    );
+    return Booking.fromJson(data);
+  }
+
+  Future<List<BookingAddon>> getBookingAddons(String bookingId) async {
+    final data = await _client
+        .from('booking_addons')
+        .select()
+        .eq('booking_id', bookingId)
+        .order('name');
+    return data.map(BookingAddon.fromJson).toList();
+  }
+
+  /// Venue owner approves a custom request. Pass [finalTotal] to set the
+  /// venue price directly, or [hourlyRate] to derive it; any reduction below
+  /// the requested price is stored as a customer-visible discount.
+  Future<Booking> approveCustomBooking(
+    String bookingId, {
+    double? finalTotal,
+    double? hourlyRate,
+  }) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'approve_custom_booking',
+      params: {
+        'p_booking_id': bookingId,
+        'p_final_total': finalTotal,
+        'p_hourly_rate': hourlyRate,
+      },
+    );
+    return Booking.fromJson(data);
+  }
+
+  Future<Booking> rejectCustomBooking(String bookingId, String reason) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'reject_custom_booking',
+      params: {'p_booking_id': bookingId, 'p_reason': reason},
+    );
+    return Booking.fromJson(data);
+  }
+
+  /// Placeholder payment for an approved booking — the future gateway
+  /// integration replaces only this call (create-checkout-session + webhook
+  /// produce the same confirmed/paid end state).
+  Future<Booking> payBookingPlaceholder(String bookingId) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'pay_booking_placeholder',
+      params: {'p_booking_id': bookingId},
+    );
     return Booking.fromJson(data);
   }
 
