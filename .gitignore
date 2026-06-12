@@ -56,3 +56,6 @@ Skills/
 
 # Kotlin daemon logs
 android/.kotlin/
+
+# Local distribution artifacts (published via GitHub Releases instead)
+dist/
