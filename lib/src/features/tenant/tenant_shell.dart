@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:venue_vibe/src/features/tenant/tenant_onboarding_screen.dart';
 import 'package:venue_vibe/src/repositories/tenant_repository.dart';
-import 'package:venue_vibe/src/theme/app_theme.dart';
 
 class TenantShell extends ConsumerWidget {
   const TenantShell({required this.child, super.key});
@@ -19,13 +18,10 @@ class TenantShell extends ConsumerWidget {
       error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
       data: (tenant) {
         if (tenant == null) return const TenantOnboarding();
-        final theme = Theme.of(context);
         final location = GoRouterState.of(context).matchedLocation;
         return Scaffold(
-      body: Row(
-        children: [
-          // ─── Sidebar Navigation ───
-          NavigationRail(
+          body: child,
+          bottomNavigationBar: NavigationBar(
             selectedIndex: _calculateIndex(location),
             onDestinationSelected: (index) {
               switch (index) {
@@ -37,67 +33,38 @@ class TenantShell extends ConsumerWidget {
                   context.go('/tenant/scheduler');
                 case 3:
                   context.go('/tenant/rules');
+                case 4:
+                  context.go('/');
               }
             },
-            labelType: NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.business,
-                    color: AppTheme.primaryBlue,
-                    size: 28,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manager',
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: AppTheme.primaryBlue),
-                  ),
-                ],
-              ),
-            ),
-            trailing: Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: IconButton(
-                    icon: const Icon(Icons.home_outlined),
-                    onPressed: () => context.go('/'),
-                    tooltip: 'Customer View',
-                  ),
-                ),
-              ),
-            ),
             destinations: const [
-              NavigationRailDestination(
+              NavigationDestination(
                 icon: Icon(Icons.dashboard_outlined),
                 selectedIcon: Icon(Icons.dashboard),
-                label: Text('Dashboard'),
+                label: 'Dashboard',
               ),
-              NavigationRailDestination(
+              NavigationDestination(
                 icon: Icon(Icons.meeting_room_outlined),
                 selectedIcon: Icon(Icons.meeting_room),
-                label: Text('Resources'),
+                label: 'Resources',
               ),
-              NavigationRailDestination(
+              NavigationDestination(
                 icon: Icon(Icons.calendar_month_outlined),
                 selectedIcon: Icon(Icons.calendar_month),
-                label: Text('Scheduler'),
+                label: 'Scheduler',
               ),
-              NavigationRailDestination(
+              NavigationDestination(
                 icon: Icon(Icons.tune_outlined),
                 selectedIcon: Icon(Icons.tune),
-                label: Text('Rules'),
+                label: 'Rules',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.storefront_outlined),
+                selectedIcon: Icon(Icons.storefront),
+                label: 'Customer',
               ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(child: child),
-        ],
-      ),
         );
       },
     );

@@ -73,36 +73,43 @@ class ResourceListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final r = resources[index];
               return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      image: r.images.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(r.images.first),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: r.images.isEmpty
-                        ? Icon(
-                            Icons.meeting_room,
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.5),
-                          )
-                        : null,
-                  ),
-                  title: Text(r.name),
-                  subtitle: Text(
-                    'Capacity: ${r.capacity} · ${r.isActive ? "Active" : "Inactive"}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
+                margin: const EdgeInsets.only(bottom: 12),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          image: r.images.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(r.images.first),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: r.images.isEmpty
+                            ? Icon(
+                                Icons.meeting_room,
+                                color:
+                                    AppTheme.primaryBlue.withValues(alpha: 0.5),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        r.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        'Capacity ${r.capacity} · '
+                        '${r.openTime} – ${r.closeTime}',
+                      ),
+                      trailing: Switch(
                         value: r.isActive,
                         onChanged: (v) async {
                           await ref
@@ -113,15 +120,42 @@ class ResourceListScreen extends ConsumerWidget {
                             ..invalidate(allResourcesProvider);
                         },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => context.push(
-                          '/tenant/resources/edit',
-                          extra: r.id,
-                        ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                      child: OverflowBar(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => context.push(
+                              '/tenant/resources/edit',
+                              extra: r.id,
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => context.go(
+                              '/tenant/scheduler',
+                              extra: r.id,
+                            ),
+                            icon: const Icon(
+                              Icons.calendar_month_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Scheduler'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => context.go(
+                              '/tenant/rules',
+                              extra: r.id,
+                            ),
+                            icon: const Icon(Icons.sell_outlined, size: 18),
+                            label: const Text('Pricing'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },

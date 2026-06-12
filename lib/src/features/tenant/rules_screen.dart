@@ -6,13 +6,31 @@ import 'package:venue_vibe/src/theme/app_theme.dart';
 import 'package:venue_vibe/src/utils/currency_formatter.dart';
 
 class RulesScreen extends ConsumerStatefulWidget {
-  const RulesScreen({super.key});
+  const RulesScreen({super.key, this.initialResourceId});
+  final String? initialResourceId;
 
   @override
   ConsumerState<RulesScreen> createState() => _RulesScreenState();
 }
 
 class _RulesScreenState extends ConsumerState<RulesScreen> {
+  String? _filterId;
+
+  @override
+  void initState() {
+    super.initState();
+    _filterId = widget.initialResourceId;
+  }
+
+  @override
+  void didUpdateWidget(RulesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialResourceId != oldWidget.initialResourceId &&
+        widget.initialResourceId != null) {
+      _filterId = widget.initialResourceId;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -21,7 +39,11 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pricing & Rules')),
       body: resourcesAsync.when(
-        data: (resources) {
+        data: (allResources) {
+          final matches = allResources.where((r) => r.id == _filterId).toList();
+          // Fall back to the full list if the filtered id is unknown.
+          final filterName = matches.isEmpty ? null : matches.first.name;
+          final resources = matches.isEmpty ? allResources : matches;
           if (resources.isEmpty) {
             return Center(
               child: Column(
@@ -39,7 +61,7 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
             );
           }
 
-          return ListView.builder(
+          final list = ListView.builder(
             padding: const EdgeInsets.all(12),
             itemCount: resources.length,
             itemBuilder: (context, index) {
@@ -149,6 +171,23 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
                 ),
               );
             },
+          );
+
+          if (filterName == null) return list;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: InputChip(
+                  avatar: const Icon(Icons.filter_alt, size: 18),
+                  label: Text(filterName),
+                  onDeleted: () => setState(() => _filterId = null),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                ),
+              ),
+              Expanded(child: list),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -128,12 +128,17 @@ class _StatCard extends ConsumerWidget {
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 12),
           valueAsync.when(
-            data: (v) => Text(
-              isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: color,
+            data: (v) => FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
             loading: () => const CircularProgressIndicator(),

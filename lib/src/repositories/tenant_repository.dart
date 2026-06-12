@@ -110,7 +110,7 @@ class TenantRepository {
     final data = await _client
         .from('platform_settings')
         .select()
-        .order('created_at')
+        .order('updated_at')
         .limit(1)
         .maybeSingle();
     if (data == null) return null;

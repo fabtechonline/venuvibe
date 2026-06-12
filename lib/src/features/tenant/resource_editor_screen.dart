@@ -202,213 +202,217 @@ class _ResourceEditorScreenState extends ConsumerState<ResourceEditorScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Resource' : 'New Resource'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Resource Name',
-                  hintText: 'e.g. Tennis Court 1, Meeting Room A',
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Resource Name',
+                    hintText: 'e.g. Tennis Court 1, Meeting Room A',
+                  ),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Name is required' : null,
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Name is required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Describe the space...',
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Describe the space...',
+                  ),
+                  maxLines: 3,
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // ─── Category Dropdown ───
-              categoriesAsync.when(
-                data: (cats) => DropdownButtonFormField<String>(
-                  initialValue: _selectedCategoryId,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: cats
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCategoryId = v),
-                  validator: (v) => v == null ? 'Category is required' : null,
+                // ─── Category Dropdown ───
+                categoriesAsync.when(
+                  data: (cats) => DropdownButtonFormField<String>(
+                    initialValue: _selectedCategoryId,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    items: cats
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategoryId = v),
+                    validator: (v) => v == null ? 'Category is required' : null,
+                  ),
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, _) => Text('$e'),
                 ),
-                loading: () => const CircularProgressIndicator(),
-                error: (e, _) => Text('$e'),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _capacityController,
-                decoration: const InputDecoration(labelText: 'Capacity'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 24),
+                TextFormField(
+                  controller: _capacityController,
+                  decoration: const InputDecoration(labelText: 'Capacity'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 24),
 
-              // ─── Operating Hours ───
-              Text('Operating Hours', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickTime(isOpen: true),
-                      icon: const Icon(Icons.schedule, size: 18),
-                      label: Text('Opens  $_openTime'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickTime(isOpen: false),
-                      icon: const Icon(Icons.schedule, size: 18),
-                      label: Text('Closes  $_closeTime'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // ─── Amenities Builder ───
-              Text('Amenities', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _amenityController,
-                      decoration: const InputDecoration(
-                        hintText: 'Add amenity (WiFi, Parking...)',
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: () {
-                      if (_amenityController.text.isNotEmpty) {
-                        setState(() {
-                          _amenities.add(_amenityController.text.trim());
-                          _amenityController.clear();
-                        });
-                      }
-                    },
-                    icon: const Icon(Icons.add),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: _amenities
-                    .map(
-                      (a) => Chip(
-                        label: Text(a),
-                        onDeleted: () => setState(() => _amenities.remove(a)),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 24),
-
-              // ─── Photos ───
-              Text('Photos', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 96,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
+                // ─── Operating Hours ───
+                Text('Operating Hours', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    for (final url in _images)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                url,
-                                width: 96,
-                                height: 96,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _images.remove(url)),
-                                child: const CircleAvatar(
-                                  radius: 11,
-                                  backgroundColor: Colors.black54,
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 14,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickTime(isOpen: true),
+                        icon: const Icon(Icons.schedule, size: 18),
+                        label: Text('Opens  $_openTime'),
                       ),
-                    GestureDetector(
-                      onTap: _uploadingImage ? null : _pickAndUpload,
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Center(
-                          child: _uploadingImage
-                              ? const CircularProgressIndicator(strokeWidth: 2)
-                              : const Icon(
-                                  Icons.add_a_photo_outlined,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickTime(isOpen: false),
+                        icon: const Icon(Icons.schedule, size: 18),
+                        label: Text('Closes  $_closeTime'),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 24),
 
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _save,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(_isEdit ? 'Update Resource' : 'Create Resource'),
+                // ─── Amenities Builder ───
+                Text('Amenities', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _amenityController,
+                        decoration: const InputDecoration(
+                          hintText: 'Add amenity (WiFi, Parking...)',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: () {
+                        if (_amenityController.text.isNotEmpty) {
+                          setState(() {
+                            _amenities.add(_amenityController.text.trim());
+                            _amenityController.clear();
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _amenities
+                      .map(
+                        (a) => Chip(
+                          label: Text(a),
+                          onDeleted: () => setState(() => _amenities.remove(a)),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // ─── Photos ───
+                Text('Photos', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 96,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final url in _images)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  url,
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _images.remove(url)),
+                                  child: const CircleAvatar(
+                                    radius: 11,
+                                    backgroundColor: Colors.black54,
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      GestureDetector(
+                        onTap: _uploadingImage ? null : _pickAndUpload,
+                        child: Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Center(
+                            child: _uploadingImage
+                                ? const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  )
+                                : const Icon(
+                                    Icons.add_a_photo_outlined,
+                                    color: AppTheme.primaryBlue,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _save,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(_isEdit ? 'Update Resource' : 'Create Resource'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

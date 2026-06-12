@@ -132,11 +132,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/tenant/scheduler',
-            builder: (context, state) => const SchedulerCalendar(),
+            builder: (context, state) => SchedulerCalendar(
+              initialResourceId: state.extra as String?,
+            ),
           ),
           GoRoute(
             path: '/tenant/rules',
-            builder: (context, state) => const RulesScreen(),
+            builder: (context, state) => RulesScreen(
+              initialResourceId: state.extra as String?,
+            ),
           ),
         ],
       ),
