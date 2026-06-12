@@ -83,7 +83,7 @@ class AdminDashboard extends ConsumerWidget {
                 _QuickActionChip(
                   icon: Icons.category,
                   label: 'Manage Categories',
-                  onTap: () => context.go('/admin/categories'),
+                  onTap: () => context.push('/admin/categories'),
                 ),
                 _QuickActionChip(
                   icon: Icons.business,
@@ -93,12 +93,12 @@ class AdminDashboard extends ConsumerWidget {
                 _QuickActionChip(
                   icon: Icons.percent,
                   label: 'Set Commission',
-                  onTap: () => context.go('/admin/commission'),
+                  onTap: () => context.push('/admin/commission'),
                 ),
                 _QuickActionChip(
                   icon: Icons.card_membership,
                   label: 'Subscription Plans',
-                  onTap: () => context.go('/admin/plans'),
+                  onTap: () => context.push('/admin/plans'),
                 ),
               ],
             ),
@@ -208,12 +208,17 @@ class _AdminStatCard extends ConsumerWidget {
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 12),
           valueAsync.when(
-            data: (v) => Text(
-              isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: color,
+            data: (v) => FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                isCurrency ? formatPrice((v as num).toDouble(), cc) : '$v',
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
             loading: () => SizedBox(
@@ -224,7 +229,10 @@ class _AdminStatCard extends ConsumerWidget {
             error: (_, __) => const Text('--'),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.grey[600])),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, style: TextStyle(color: Colors.grey[600])),
+          ),
         ],
       ),
     );

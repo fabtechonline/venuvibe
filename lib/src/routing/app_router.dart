@@ -182,26 +182,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AdminDashboard(),
           ),
           GoRoute(
-            path: '/admin/categories',
-            builder: (context, state) => const CategoryManager(),
-          ),
-          GoRoute(
             path: '/admin/tenants',
             builder: (context, state) => const TenantManager(),
-          ),
-          GoRoute(
-            path: '/admin/commission',
-            builder: (context, state) => const CommissionScreen(),
-          ),
-          GoRoute(
-            path: '/admin/plans',
-            builder: (context, state) => const PlansScreen(),
           ),
           GoRoute(
             path: '/admin/invoices',
             builder: (context, state) => const InvoicesScreen(),
           ),
         ],
+      ),
+      // Pushed full-screen admin pages (back button in the AppBar).
+      GoRoute(
+        path: '/admin/categories',
+        builder: (context, state) => const CategoryManager(),
+      ),
+      GoRoute(
+        path: '/admin/commission',
+        builder: (context, state) => const CommissionScreen(),
+      ),
+      GoRoute(
+        path: '/admin/plans',
+        builder: (context, state) => const PlansScreen(),
       ),
     ],
   );
