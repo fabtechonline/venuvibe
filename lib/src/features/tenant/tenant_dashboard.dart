@@ -125,6 +125,12 @@ class TenantDashboard extends ConsumerWidget {
               subtitle: 'Contact person, number and address shown to customers',
               onTap: () => context.push('/tenant/profile'),
             ),
+            _ActionCard(
+              icon: Icons.mail_outline,
+              title: 'Email Settings',
+              subtitle: 'Send booking emails & receipts from your own address',
+              onTap: () => context.push('/tenant/email'),
+            ),
 
             const SizedBox(height: 24),
 

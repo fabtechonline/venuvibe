@@ -10,6 +10,7 @@ import 'package:venue_vibe/src/features/admin/plans_screen.dart';
 import 'package:venue_vibe/src/features/admin/tenant_manager.dart';
 import 'package:venue_vibe/src/features/auth/auth_screens.dart';
 import 'package:venue_vibe/src/features/tenant/approvals_screen.dart';
+import 'package:venue_vibe/src/features/tenant/email_settings_screen.dart';
 import 'package:venue_vibe/src/features/tenant/resource_editor_screen.dart';
 import 'package:venue_vibe/src/features/tenant/resource_list_screen.dart';
 import 'package:venue_vibe/src/features/tenant/rules_screen.dart';
@@ -202,6 +203,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/profile',
         builder: (context, state) => const VenueProfileScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/email',
+        builder: (context, state) => const EmailSettingsScreen(),
       ),
       GoRoute(
         path: '/tenant/resources/edit',

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:venue_vibe/src/core/supabase_config.dart';
 import 'package:venue_vibe/src/models/category.dart';
+import 'package:venue_vibe/src/models/email_settings.dart';
 import 'package:venue_vibe/src/models/platform_models.dart';
 import 'package:venue_vibe/src/models/tenant.dart';
 
@@ -40,6 +41,14 @@ final tenantResourceLimitProvider = FutureProvider<int>((ref) async {
   }
   if (plans.isEmpty) return 1;
   return plans.map((p) => p.maxResources).reduce((a, b) => a < b ? a : b);
+});
+
+/// The current tenant's SMTP email settings (null until first saved).
+final tenantEmailSettingsProvider =
+    FutureProvider<TenantEmailSettings?>((ref) async {
+  final tenant = await ref.watch(currentTenantProvider.future);
+  if (tenant == null) return null;
+  return ref.read(tenantRepositoryProvider).getEmailSettings(tenant.id);
 });
 
 final adminCategoriesProvider = FutureProvider<List<Category>>((ref) async {
@@ -112,6 +121,38 @@ class TenantRepository {
     Map<String, dynamic> fields,
   ) async {
     await _client.from('tenants').update(fields).eq('id', tenantId);
+  }
+
+  // Email (SMTP) settings — owner/admin-only via RLS.
+  Future<TenantEmailSettings?> getEmailSettings(String tenantId) async {
+    final data = await _client
+        .from('tenant_email_settings')
+        .select()
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+    return data == null ? null : TenantEmailSettings.fromJson(data);
+  }
+
+  Future<void> upsertEmailSettings(TenantEmailSettings settings) async {
+    await _client
+        .from('tenant_email_settings')
+        .upsert(settings.toJson(), onConflict: 'tenant_id');
+  }
+
+  /// Asks the send-emails Edge Function to send a test email through the
+  /// saved SMTP settings (delivered to the configured from address).
+  Future<String> sendTestEmail(String tenantId) async {
+    final res = await _client.functions.invoke(
+      'send-emails',
+      body: {
+        'test': {'tenant_id': tenantId},
+      },
+    );
+    final data = res.data as Map<String, dynamic>?;
+    if (res.status != 200 || data == null || data['ok'] != true) {
+      throw Exception(data?['error'] ?? 'Test email failed');
+    }
+    return data['sent_to'] as String? ?? '';
   }
 
   // Platform Settings

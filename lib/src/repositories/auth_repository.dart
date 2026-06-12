@@ -43,15 +43,55 @@ class AuthRepository {
       email: email,
       password: password,
     );
-    if (response.user != null) {
-      await _client.from('profiles').upsert({
-        'id': response.user!.id,
-        'email': email,
-        'full_name': fullName,
-        'role': role,
-      });
+    // With email confirmation enabled there is no session yet — RLS would
+    // block the profile write. It happens after the OTP step instead.
+    if (response.session != null && response.user != null) {
+      await completeProfile(
+        userId: response.user!.id,
+        email: email,
+        fullName: fullName,
+        role: role,
+      );
     }
     return response;
+  }
+
+  Future<void> completeProfile({
+    required String userId,
+    required String email,
+    required String fullName,
+    String role = 'user',
+  }) async {
+    await _client.from('profiles').upsert({
+      'id': userId,
+      'email': email,
+      'full_name': fullName,
+      'role': role,
+    });
+  }
+
+  /// Emails a 6-digit password-reset code (recovery template).
+  Future<void> sendPasswordResetCode(String email) async {
+    await _client.auth.resetPasswordForEmail(email);
+  }
+
+  /// Verifies a 6-digit email code (signup confirmation or recovery);
+  /// a successful verification establishes a session.
+  Future<AuthResponse> verifyEmailCode({
+    required String email,
+    required String code,
+    required OtpType type,
+  }) {
+    return _client.auth.verifyOTP(email: email, token: code, type: type);
+  }
+
+  /// Re-sends the signup confirmation code.
+  Future<void> resendSignupCode(String email) async {
+    await _client.auth.resend(type: OtpType.signup, email: email);
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   Future<AuthResponse> signIn({

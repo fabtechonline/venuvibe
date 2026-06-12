@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:venue_vibe/src/features/auth/otp_screens.dart';
 import 'package:venue_vibe/src/repositories/auth_repository.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -153,7 +154,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text('Sign In'),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    ),
+                    child: const Text('Forgot password?'),
+                  ),
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -211,13 +220,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _error = null;
     });
     try {
-      await ref.read(authRepositoryProvider).signUp(
-            email: _emailController.text.trim(),
+      final email = _emailController.text.trim();
+      final fullName = _nameController.text.trim();
+      final response = await ref.read(authRepositoryProvider).signUp(
+            email: email,
             password: _passwordController.text,
-            fullName: _nameController.text.trim(),
+            fullName: fullName,
             role: _selectedRole,
           );
-      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      if (response.session == null) {
+        // Email confirmation required: collect the 6-digit code first.
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => OtpVerifyScreen.signup(
+              email: email,
+              fullName: fullName,
+              role: _selectedRole,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
